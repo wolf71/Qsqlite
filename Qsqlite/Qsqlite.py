@@ -1329,7 +1329,7 @@ def proc_cmd(cmd0):
 			my = re.findall('#(.+?)#',db)
 			# Check Files
 			if db == ':memory:':
-				print('Using Share Memroy Database.')
+				print('Using Share Memory Database.')
 			elif my:
 				if not mysql_srv.get(my[0]):
 					db = ''
