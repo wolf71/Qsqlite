@@ -18,7 +18,7 @@
 - A **python libray**  Can be imported using: from Qsqlite import Qexec , for use in python or jupyter/ipython ipynb notebooks using Qexec(cmds) calls, cmds can be a string with newlines,including a series of commands or a command.
 - **Summary**: With sqlite's powerful sql syntax and high performance, Qsqlite hopes to enable you to efficiently use the power of sqlite and sql syntax to **quickly** organize, analyze, aggregation, and show result; and collaborate with Excel by exporting/importing csv files when needed to achieve greater efficiency.
 
-![Draw function demo]](draw.jpeg)
+![Draw function demo](draw.jpeg)
 
 ## Quickly start
 1. install
