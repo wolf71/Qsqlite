@@ -1,0 +1,38 @@
+'''
+  loop/lend nested function demo script
+
+'''
+
+# open a memory database, and create demo table
+open :memory:
+create table corp (id text, name text)
+insert into corp values('001','Apple')
+insert into corp values('002','Microsoft')
+insert into corp values('002','IBM')
+
+echo # loop data select from a table
+# loop come from table using select 
+loop select * from corp
+  echo [=== Hello, Come from _^2_ ===]
+  loop [ (1, 2), (2, 4), (3, 6) ]
+    echo --- _^0_ --- _^1_ * 2 = _^2_
+  lend
+  echo ** Bye. _^1_, _^2_
+lend
+
+
+echo # loop data from a python list 
+# loop come from list 
+loop [ (i+1, ) for i in range(9) ]
+  loop [ ( _^1_, '='*_^1_ ) ]
+    echo  _^2_ _^1_ _^2_
+  lend
+  loop [ (_^1_, i+1, _^1_*(i+1), ) for i in range(9)]
+    echo _^1_ * _^2_ = _^3_
+  lend
+lend
+
+echo # how to using python script general data
+loop [ ( ['Apple','IBM','Oracle','Google','Microsoft','Facebook','Intel','Sap','HP','Autodesk'][int(random()*10)],int(random()*100000) ) for i in range(10)]
+  echo _^1_, _^2_
+lend

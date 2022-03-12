@@ -1,0 +1,76 @@
+'''
+	Qsqlite Webserver Script Demo
+
+'''
+
+# Open Web Server at http://127.0.0.1:8080
+@webserver 127.0.0.1:8080	
+
+# open Database
+open :memory:
+# create a table & insert data
+create table demo( ID text, Name text, Age integer)
+insert into demo values (101, 'Apple', 10)
+insert into demo values (202, 'Tom', 12)
+insert into demo values (303, 'Tony', 11)
+
+#
+# Root page
+#
+@page /
+echo ## Welcome Qsqlite Website
+# display now time
+select strftime('%Y-%m-%d %H:%M','now','localtime') >[Time is: _@1_]
+echo
+echo <a href="user">List all user</a>
+echo
+echo <a href="draw">Draw users age</a>
+
+#
+# List all User from table 
+#
+@page user
+echo ## Users List
+select * from demo >[- _@0_ ID: _@1_ Name: _@2_ Age: _@3_  <a href="/edit?_@1_">edit</a>]
+echo <a href="/">Home</a> &nbsp;&nbsp;&nbsp; <a href="/adduser">Add User</a>
+
+#
+# edit a user information
+#
+@page edit
+echo ## Edit User Infomation
+select * from demo where ID = '_#1_' >[ webinput /update Name(12)(_@2_) Age(6)(_@3_) _ID()(_@1_) ^update ]
+
+#
+# update to database 
+#
+@page update
+echo ## Data update
+echo - Edit: _#1_ _#2_ _#3_
+update demo set Name = '_#1_' , Age = _#2_ where ID = '_#3_'
+echo <a href="/user">back to userlist</a>
+
+#
+# add a user 
+#
+@page adduser
+echo ## Add User
+# you can set default values, etc: Age(6)(12)  (6)-space  (12)-default
+webinput /insert ID(6)() Name(12)() Age(6)(12)  ^add
+
+#
+# insert to database
+#
+@page insert
+echo ## Data Inser
+echo - Insert: _#1_ _#2_ _#3_
+insert into demo values('_#1_', '_#2_', _#3_)
+echo <a href="/user">back to userlist</a>
+
+#
+# draw user age 
+#
+@page draw
+echo ## Age line
+draw l select name,age from demo
+echo <a href="/">Home</a>

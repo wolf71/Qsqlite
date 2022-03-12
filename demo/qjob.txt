@@ -1,0 +1,28 @@
+'''
+
+    Qsqlite JobServer Demo Script
+
+'''
+
+# Start Job Server
+@jobserver 
+# open memory database
+open :memory:
+
+# job 001 for file
+@job [0123456] [14:22] [out__@Date_.html]
+echo # Test Report
+select strftime('%Y-%m-%d %H:%M:%S','now','localtime') >[- Job 1 Run at: _@1_]
+
+# job 002 for file
+@job [123] [09:30] [out_justforfun.html]
+echo # This is [123] [09:30] excute result
+select strftime('%Y-%m-%d %H:%M:%S','now','localtime') >[- Job 2 Run at: _@1_]
+
+
+# job 003 for email
+@mail [246] [20:00] [smtp.office365.com:587] [xxxxx@hotmail.com] [password] [Report _@Date_ _@Time_] [youremail@me.com your2mail@me.com]
+echo # Report to me
+select strftime('%Y-%m-%d %H:%M:%S','now','localtime') >[- Job 3 Run at: _@1_]
+echo ## Report 003
+
