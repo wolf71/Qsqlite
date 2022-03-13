@@ -46,6 +46,7 @@
 	- qdraw.txt   html output and drawing demo (requires two csv files in the demo directory)
 	- qweb.txt    Web server demo
 	- qjob.txt    Job task server demo
+	- qnotebook.ipynb  iPython notebook demo
 
 ## Qsqlite function
 ### 1. Basic database operation functions
@@ -134,10 +135,22 @@
 		- draw s select x, y, size from table
   - Four data sets, the first two are X,Y coordinates, the last two are point size, point color parameters.
 		- draw s select x, y, size, color from table
-- 3.2 **draw l** line plot, plot one or more sets of data，if there is only one set of data (select a from tb1), the system will automatically generate the corresponding X-axis data (0..N) according to the number of result sets; if there is more than one data, the first row of data will be displayed as X-axis marker (usually date/time), and the others as Y-axis (select x_lable,col1,col2 from tab1);
-  - **draw l2** means the data of X-axis is not the system generated 0-N equal scale data, but the first item of select result; for example: draw l2 select height, weight, m from tb1
-  - **draw ll** means logarithmic processing of Y-axis; **draw ll2** means double logarithmic processing of X-Y-axis;
+- 3.2 **draw l** line plot, plot one or more sets of data，
+  - One dataset, as Y-coordinate, automatically generates X-coordinate from 0-N.
+		- draw l select y from table
+  - Two data sets, then as X label, Y coordinates.
+		- draw l select x_label, y from table
+  - Multiple data sets, the first one as X_label, The latter all as Y-coordinates, superimposed.
+		- draw l select x_label, y1, y2, ... from table
+  - **draw l2** means the data of X-axis is not the system generated 0-N equal scale data, but the first item of select result.
+		- draw l2 select x, y1, y2 from table
+		- draw l2 select x, y1, y2, y3 from table
+		- draw l2x select x, y from table (logarithmic processing of X-axis) 
+		- draw l2l select x, y from table (double logarithmic processing of X-Y-axis)
+  - **draw lx** means logarithmic processing of X-axis; **draw ly** means logarithmic processing of Y-axis; **draw ll** means double logarithmic processing of X-Y-axis;
   - **draw ls** plots multiple columns of data on different **subplots**, side by side;
+		- draw ls select x_label, y1, y2 from table (draw two sub-plot, one is x_label, y1, other is x_label, y2)
+		- draw lsy select x_label, y1, y2 from table (draw two sub-plot and ogarithmic processing of Y-axis)
 - 3.3 **draw h** plots the distribution (histogram), taking only the first column of the result set; 
   - **draw hx** indicates logarithmic processing of the x-axis of the distribution; 
   - **draw hy** denotes logarithmic processing of the Y-axis of the distribution;
@@ -257,7 +270,7 @@
 		copy :memory: T select '_^1_',count(*),0 from tab3 where xxx group by xxx
 		copy :memory: T select '_^1_',0,count(*) from tab6 where xxx group by xxx
 		open :memory:
-		select gtime,max(c),max(n) from T group by gtime >[_@1_ 参数1: _@2_, 参数2:_@3_]
+		select gtime,max(c),max(n) from T group by gtime >[_@1_ Arg1: _@2_, Arg2:_@3_]
 	```
 
 ### 6. WebServer support (single-threaded)
@@ -291,7 +304,7 @@
 		@page / 
 		echo Welcome My Web Home.
 	```
-- 6.3 Implementing html <form> <input > input box manipulation commands via **webinput**
+- 6.3 Implementing html form / input box manipulation commands via **webinput**
 	- Use webinput url prompt1(width)(preset content) prompt2(width)(preset content) ~submit button content; Example:
 		- webinput /query name(6)() address(12)(address should be detailed to room number) ~query
 	- If you want the buttons to be arranged vertically (one button per line), change the ~ at the end to ^, for example: 
@@ -338,7 +351,7 @@
 - If you do not redirect the output, the execution may be interrupted in the background!!!
 
 ### 9. Python, iPython or Jupyter 
-	- In Python program or iPython notebook, you can import Qsqlite.
+- In Python program or iPython notebook, you can import Qsqlite.
 ```python
 	# import Qexec
 	from Qsqlite import Qexec
@@ -350,6 +363,7 @@
 	'''
 	Qexec(script)
 ```
+- Please check demo directory qnotebook.ipynb file for the complete demo.
 
 ## Development Background
 - 2020 Spring break wrote a program to collect online user data every minute and save it to an SQlite database. in order to analyze this data interactively and display it graphically, it needs to be implemented in Python code, and the code needs to be adjusted every time the data is analyzed, so the hands-on writing of a tool is desired for automation.
@@ -375,11 +389,12 @@
 - 2021/01/06   V0.80 Add WebServer Support. using @webserver @page config.
 - 2021/01/28   V0.81 Add sub LOOP/LEND Support.
 - 2021/05/30   V0.83 Add JobServer support job & email.
-- 2021/09/03   V0.85 Add <form> <input> support for WebServer.
+- 2021/09/03   V0.85 Add form / input support for WebServer.
 - 2021/10/20   V0.86 Fix a bug in regfind.
 - 2022/02/25   V0.87 Add loadjson function.
 - 2022/02/28   V0.88 Add draw scatter function.
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
+- 2022/03/13   V0.9  BugFix and add some demo.
 
 ## sqlite references
 - SQlite3 Doc

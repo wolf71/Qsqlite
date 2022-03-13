@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.89
+__version__ = 0.9
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.89) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.9) ======
  q - quit
  h/? - help
  #/-  comment; three ' for block comment
@@ -1225,8 +1225,8 @@ def SQliteDraw(sqlite_db, cmd):
 				else:
 					data[j] = [i[j]]
 		# 折线图 (规则：结果1列，作为Y轴，X轴系统生成；2列，第一列作为X，第二列作为Y；超过2列，第一列X，其它都是Y轴，不同颜色绘制)
-		if type[0:1] == 'L':
-			# 如果只有一列结果，则自动构建X轴
+		if type[:1] == 'L':
+			# 若超过一列, 且L2参数设置, 使用第一列作为X(转浮点); 否则自动构建X轴
 			if rcnt > 1 and type[0:2] == 'L2':
 				x = [float(i) for i in data[0]]
 			else:
@@ -1237,7 +1237,7 @@ def SQliteDraw(sqlite_db, cmd):
 			# 循环绘制对应的 Y 轴数据
 			for i in range(start_p, rcnt):
 				# 如果需要绘制子图，则创建对应子图
-				if type == 'LS' and rcnt > 2: plt.subplot(1,rcnt-1,i)
+				if type[:2] == 'LS' and rcnt > 2: plt.subplot(1,rcnt-1,i)
 				# 根据 data[i] 数据，将None值部分的X,Y数据剔除 (例如有些数据是 [3,None,None,4,None,None,5] -> [3,4,5]，对应x轴也需要去掉None的部分)
 				xx, dd = [], []
 				for n, tt in enumerate(data[i]):
@@ -1254,12 +1254,12 @@ def SQliteDraw(sqlite_db, cmd):
 					if lt == 'Y' or lt == 'L': plt.yscale('log')
 				# 对于 X 轴非系统生成，且非双对数处理，则设置标签
 				# 默认按照32等分，如果多子图，则相应缩减
-				if rcnt > 1 and (i == rcnt - 1 or type == 'LS') and type != 'LL' and type != 'LX' and type[0:2] !='L2':
+				if rcnt > 1 and (i == rcnt - 1 or type[:2] == 'LS') and type != 'LL' and type != 'LX' and type[0:2] !='L2':
 					xlen = len(data[0])
 					# 32 等分x坐标轴，绘制标签文字 / 如果多子图，则相应调整
 					if n_sub > 1:
 						ss = int(32.0/n_sub)
-					elif type == 'LS':
+					elif type[:2] == 'LS':
 						ss = int(32.0/(rcnt-1))
 					else:
 						ss = 32
@@ -1329,7 +1329,7 @@ def proc_cmd(cmd0):
 			my = re.findall('#(.+?)#',db)
 			# Check Files
 			if db == ':memory:':
-				print('Using Share Memroy Database.')
+				print('Using Share Memory Database.')
 			elif my:
 				if not mysql_srv.get(my[0]):
 					db = ''
@@ -1530,6 +1530,7 @@ def Qexec(cmd):
 	cblock = False			# 采用 ''' 块注释标记
 	try:
 		for i in cmds:
+			i = i.strip()
 			if i:
 				# 如果出现块注释，则取反注释标记(配对出现)
 				if i[:3] == "'''":
@@ -1538,9 +1539,7 @@ def Qexec(cmd):
 				# 如果不属于块注释范围，则解释命令；否则跳过
 				if not cblock:
 					if i[0] != '#' and i[0] !='-':
-						c = i.strip()
-						if c:
-							proc_cmd(c)
+						proc_cmd(i)
 	except KeyboardInterrupt:
 		print('!!! Ctrl+c Break.')
 
@@ -1580,7 +1579,10 @@ def main():
 				if wcmd:
 					# 启动 Job Server 服务器
 					print('JobServer Started.')
-					JobServer(wcmd)
+					try:
+						JobServer(wcmd)
+					except KeyboardInterrupt:
+						print('JobServer Stop...')
 				#
 				# 3. 解析普通脚本文件，并执行
 				#

@@ -43,6 +43,7 @@
 	- qdraw.txt   html输出及绘图功能演示 （需使用 demo 目录下两个 csv 文件)
 	- qweb.txt    Web服务器功能演示
 	- qjob.txt    Job任务服务器功能演示
+	- qnotebook.ipynb  iPython notebook 演示
 
 ## Qsqlite 功能
 ### 1. 基础数据库操作功能
@@ -125,14 +126,30 @@
 
 ### 3. 绘制图表功能 (折线图、分布图、箱型图、散点图)
 - 3.1 **draw s** 绘制散点图
-  - 一个数据集，作为 Y 坐标，自动生成 0-N 的X坐标:  draw s select y from table
-  - 两个数据集，则作为 X,Y 坐标:  draw s select x, y from table 
-  - 三个数据集，前两个为 X,Y 坐标, 后一个为 点大小 参数: draw s select x, y, size from table 
-  - 四个数据集, 前两个为 X,Y 坐标, 后两个为 点大小, 点颜色参数: draw s select x, y, size, color from table
-- 3.2 **draw l** 绘制折线图, 可绘制一组或多组数据，如果只有一组数据（select a from tb1），系统会自动根据结果集数量，产生对应的X轴数据(0..N); 如果是多个数据，则第一行数据作为 X 轴标记显示（一般是日期/时间），其它作为 Y 轴 (select x_lable,col1,col2 from tab1);
-  - **draw l2** 表示 X 轴的数据不是系统产生的 0-N 的等比例数据, 而是用 select 结果第一项；例如：draw l2 select height, weight, m from tb1
-  - **draw ll** 表示对 Y 轴进行对数处理;  **draw ll2** 表示进行 X-Y 轴进行双对数处理;
+  - 一个数据集，作为 Y 坐标, 自动生成 0-N 的X坐标
+		- draw s select y from table
+  - 两个数据集，则作为 X,Y 坐标
+		- draw s select x, y from table
+  - 三个数据集，前两个为 X,Y 坐标, 后一个为 点大小 参数
+		- draw s select x, y, size from table 
+  - 四个数据集, 前两个为 X,Y 坐标, 后两个为 点大小, 点颜色参数
+		- draw s select x, y, size, color from table
+- 3.2 **draw l** 绘制折线图, 可绘制一组或多组数据
+	- 一个数据集, 作为 Y 坐标, 自动生成 0-N 的X坐标
+		- draw l select y from table
+	- 两个数据集, 则第一个数据集作为 X 轴标签, 第二个作为 Y 坐标
+		- draw l select x_lable, y from table
+	- 多个数据集, 则第一个数据集作为 X 轴标签, 后面都作为 Y 坐标, 叠加显示
+		- draw l select x_lable, y1, y2 from table
+  - **draw l2** 表示 X 轴的数据不是系统产生的 0-N 的等比例数据, 而是用 select 结果第一项
+		- draw l2 select x, y from table
+		- draw l2 select x, y1, y2, y3 from table
+		- draw l2x select x, y from table (x轴对数处理) 
+		- draw l2l select x, y from table (x-y轴双对数处理)
+  - **draw lx** 表示对 X 轴进行对数处理; **draw ly** 表示对 Y 轴进行对数处理;  **draw ll** 表示进行 X-Y 轴进行双对数处理;
   - **draw ls** 将多个数据列，绘制在不同的 **子图** 上，并列排放;
+		- draw ls select x_label, y1, y2 from table (绘制两个子图, 一个是 x_label, y1, 另一个是 x_label, y2)
+		- draw lsy select x_label, y1, y2 from table (绘制两个子图, 都对 Y轴进行对数处理)
 - 3.3 **draw h** 绘制分布图(直方图), 只取结果集的第一列; 
   - **draw hx** 表示对 分布图的 X 轴进行对数处理; 
   - **draw hy** 表示对 分布图的 Y 轴进行对数处理;
@@ -286,7 +303,7 @@
 		@page / 
 		echo Welcome My Web Home.
 	```
-- 6.3 通过 **webinput** 实现 html <form> <input > 输入框操作指令
+- 6.3 通过 **webinput** 实现 html form / input  输入框操作指令
 	- 使用 webinput url 提示内容1(宽度)(预设内容) 提示内容2(宽度)(预设内容) ~提交按钮内容; 例如:
 		- webinput /query 姓名(6)() 地址(12)(地址要详细到房号) ~查询
 	- 如希望将按钮布局采用竖向排列(每一行一个按钮), 则最后的 ~ 变更为 ^, 例如: 
@@ -331,7 +348,7 @@
 - 如果不重定向输出，则可能会导致后台被中断执行!!
 
 ### 9. Python, iPython or Jupyter 
-	- 在 Python 程序或 iPython notebook 中, 可以导入 Qsqlite 的库
+- 在 Python 程序或 iPython notebook 中, 可导入 Qsqlite 的库
 ```python
 	# import Qexec
 	from Qsqlite import Qexec
@@ -343,6 +360,7 @@
 	'''
 	Qexec(script)
 ```
+- 完整的演示，可以参考 demo 目录下的 qnotebook.ipynb 笔记程序
 
 ## 开发背景
 - 2020 春节假期写了一个程序每隔一分钟收集公司在线用户数据保存到一个SQlite数据库；为交互分析这些数据并图形化展示，需要用Python代码来实现，每次新的分析需求还需调整代码，因此动手写一个工具，希望实现自动化；
@@ -367,11 +385,12 @@
 - 2021/01/06   V0.80 Add WebServer Support. using @webserver @page config.
 - 2021/01/28   V0.81 Add sub LOOP/LEND Support.
 - 2021/05/30   V0.83 Add JobServer support job & email.
-- 2021/09/03   V0.85 Add <form> <input> support for WebServer.
+- 2021/09/03   V0.85 Add form / input support for WebServer.
 - 2021/10/20   V0.86 Fix a bug in regfind.
 - 2022/02/25   V0.87 Add loadjson function.
 - 2022/02/28   V0.88 Add draw scatter function.
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
+- 2022/03/13   V0.9  BugFix and add some demo.
 
 ## sqlite 参考资料
 - SQlite3 Doc
