@@ -5,7 +5,7 @@ with open('Readme.md', 'r') as f:
 
 setuptools.setup(
     name = 'Qsqlite',
-    version = '0.9',
+    version = '0.91',
     author = 'Charles Lai',
     author_email = '',
     description = 'Quick Sqlite Tools',
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type = 'text/markdown',
     url = 'https://github.com/wolf71/Qsqlite',
     packages = ['Qsqlite'],   #setuptools.find_packages(),
-    install_requires=['matplotlib>=3.0.0'],
+    # install_requires=['matplotlib>=3.0.0'],
     entry_points={
         'console_scripts': [
             'Qsqlite = Qsqlite:main'

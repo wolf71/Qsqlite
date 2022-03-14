@@ -19,6 +19,7 @@
 - **总结**: 借助 sqlite 强大的 sql 语法功能 和 高性能的表现，Qsqlite希望能让你**高效**的发挥 sqlite 和 sql语法 的能力，快速实现数据的整理、分析、统计、展示工作；并在需要时可通过导出/导入 csv 文件和 Excel 进行协同工作，实现更高效率。
 ![Draw function demo](draw.jpeg)
 
+
 ## 快速使用
 1. 将 Qsqlite.py 复制到本地, 而后在 命令行/终端 下运行 python Qsqlite.py (请确认使用 python3 环境运行)
 2. 现在你可以输入 sql 指令或输入 ? 来获取帮助信息，或者尝试将下面指令复制进去运行测试一下
@@ -183,9 +184,43 @@
 	- ctop('1 2 3 4 5', ' ', 2) 将返回 '1 2';  ctop('1,2,3,4,5', ',', 3) 将返回 '1,2,3'
   - 当用 csum 将结果集聚合成一个字符串，若希望获取TopN项, 则可用这个功能，例如: ctop(csum(name||count(*)),' ',10), 这样就可实现对每个group by 数据, 只选取前面10个
 13. 返回找到正则的数量: **regfn(',','1,2,3,4,5,6')** 返回5，表示找到5个逗号
-14. 针对同一个传入变量，提供自增计数器，即当输入参数没有变化，每次调用返回值+1，直到输入参数变化，则从1再开始计算; 可用 select **cindex('@@_0_@@')** 来强制重置计数器；这个功能对于 group by 后选取分组 top N 项 很有价值；例如：
-  - (!!! 注意：因为 cindex(N) as II ，而后用 where II< 判断，实际上是执行了两次，导致 cindex 执行了多次
-	- select N,C,Dist,cindex(N) as II from (select N,max(C) as C, ID, count(*) as C1 from (select N, C, substr(USER_ID,1,4) as ID from USERBASE as T,(select substr(USER_NAME,1,1) as N, count(*) as C from USERBASE group by substr(USER_NAME,1,1) having C > 50) as T1 where length(USER_ID)=18 and substr(T.USER_NAME,1,1) = T1.N) group by N,ID order by C desc, C1 desc) as T , IDTYPE as I where T.ID = I.ID and II<21
+14. N行移动平均值计算: **navg(列名, n)** 
+	- 假设一个 stock 股价表, 按 日期 存储每个股票的价格信息, 结构为: ID text, date text, open integer, close integer
+	- 希望计算 open 开盘价格的 7 天移动平均线, 普通的 SQL 语句很难一次实现, 而该函数就是提供此类支持
+		- draw l select date, open, navg(open, 7) from stock where ID='Apple' 
+		- 以上语句绘制 open 价格曲线, 并叠加7日移动平均线;
+	- **限制条件**: 因为该扩展函数使用了全局变量，因此在一次查询中，只能使用一个 navg 语句, 如果使用多个, 则会导致数据错误;
+15. 行间差值计算: **rdelta(列名)**
+	- 假设一个 covid19 表, 按 日期 存储每个国家/城市的确诊人数信息，结构为: CID text, date text, confirmed text
+	- 希望计算每日新增确诊用户数, 因为数据里面存储的是累计的确诊人数, 因此实际上需要计算两行之间的差值, 用 SQL 语句可以借助 rowid 实现 (例如: select )
+		- select date, rdelta(confirmed+0) as d_confirmed from covid19 where CID='US'
+		- 为什么是 confirmed+0? 因为 confirmed 是字符类型, 通过这种方式将其转换为 数字类型
+		- 以上语句计算出 每日新增确诊 人数数据; 第一行因为数据无法计算，因此填入 null 值
+	- **限制条件**: 因为该扩展函数使用了全局变量，因此在一次查询中，只能使用一个 rdelta 语句, 如果使用多个, 则会导致数据错误;
+16. 行间字符串差异计数器 **cindex(列名)**
+	- 假设一个 book 图书表, 按照类别记录书本信息, 表结构: ID text, type text, name text, 内容如下:
+	```
+	001 G01 book1
+	002 T11 book2
+	003 G03 book3
+	004 T11 book4
+	005 T11 book5
+	006 G03 book6
+	007 G03 book7
+	```
+	- 希望 从 每个类别 获取2本书 的信息, 如果用 group by 会导致只能够获取每个类别一本书, 本函数可以简单实现
+	- select type, ID, name, cindex(type) as cnt from (select * from book order by type) as b where cnt <4 , 执行结果如下
+	```
+	G01 001 book1 2
+	G03 003 book3 2
+	G03 006 book6 4
+	T11 002 book2 2
+	T11 004 book4 4
+	```
+		- 利用子查询, 对数据进行排序; 这样确保我们需要的 type 顺序排列, 这样才能正确识别 type 变化;
+		- where 条件中, 我们希望 获取 2 本书, 但是为什么是 4? 因为 cindex 每一行被调用2次 (select 语句 cindex(type) as cnt 这个部分, 以及 where cnt<4 这个部分), 因此需要 *2
+	- **限制条件**: 因为该扩展函数使用了全局变量，因此在一次查询中，只能使用一个 navg 语句, 如果使用多个, 则会导致数据
+	- **注意事项**: 在 where 条件中使用 cindex() 值的判断, 需要 *2, 即: 当你需要 <10 的时候，设置为 <10*2
 
 ### 5. 脚本支持
 - 5.1 脚本概述
@@ -391,6 +426,7 @@
 - 2022/02/28   V0.88 Add draw scatter function.
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
+- 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 
 ## sqlite 参考资料
 - SQlite3 Doc

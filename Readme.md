@@ -18,7 +18,7 @@
 - A **python libray**  Can be imported using: from Qsqlite import Qexec , for use in python or jupyter/ipython ipynb notebooks using Qexec(cmds) calls, cmds can be a string with newlines,including a series of commands or a command.
 - **Summary**: With sqlite's powerful sql syntax and high performance, Qsqlite hopes to enable you to efficiently use the power of sqlite and sql syntax to **quickly** organize, analyze, aggregation, and show result; and collaborate with Excel by exporting/importing csv files when needed to achieve greater efficiency.
 
-![Draw function demo](draw.jpeg)
+![Draw function demo](https://github.com/wolf71/Qsqlite/blob/master/draw.jpeg?raw=true)
 
 ## Quickly start
 1. install
@@ -184,9 +184,43 @@
 	- ctop('1 2 3 4 5', ' ', 2) return '1 2';  ctop('1,2,3,4,5', ',', 3) return '1,2,3'
   - When using csum to combine the result set into a string, if you want to get the topN items, you can use this function, for example: ctop(csum(name||count(*)),' ',10), so that for each group by data, only the first 10 are selected
 13. return the number of regulars found: **regfn(',','1,2,3,4,5,6')** returns 5, meaning 5 commas were found
-14. for the same incoming variable, provide a self-incrementing counter, i.e., when the input parameter does not change, each call returns +1 until the input parameter changes, then start counting from 1 again; you can select **cindex('@@_0_@@')** to force the counter to reset; this function is valuable for selecting the group top N items after group by; for example.
-  - (!!!! Note: Because cindex(N) as II, followed by where II<, is actually executed twice, resulting in cindex being executed multiple times
-	- select N,C,Dist,cindex(N) as II from (select N,max(C) as C, ID, count(*) as C1 from (select N, C, substr(USER_ID,1,4) as ID from USERBASE as T, (select substr(USER_NAME,1,1) as N, count(*) as C from USERBASE group by substr(USER_NAME,1,1) having C > 50) as T1 where length(USER_ID)=18 and substr(T.USER _NAME,1,1) = T1.N) group by N,ID order by C desc, C1 desc) as T , IDTYPE as I where T.ID = I.ID and II<21
+14. N row moving average calculation: **navg(column name, n)** 
+	- Suppose a stock price table, storing the price information of each stock by date, structure: ID text, date text, open integer, close integer
+	- If you want to calculate the 7-day moving average of the open price, it is difficult to do it at once with SQL statements, but this function provides such support
+		- draw l select date, open, navg(open, 7) from stock where ID='Apple' 
+		- The above statement draws the open price curve, and overlays the 7-day moving average;
+	- **Restrictions**: Because this extension uses global variables, only one navg statement can be used in a query, if more than one is used, it will result in data errors;
+15. inter-row difference calculation: **rdelta(column name)**
+	- Suppose a covid19 table, storing the number of confirmed in each country by date, with the following structure: CID text, date text, confirmed text
+	- You want to calculate the new confirmed per day, because the table include total confirmed , so you actually need to calculate the difference between two rows. this function provides such support
+		- select date, rdelta( confirmed+0 ) as d_confirmed from covid19 where CID='US'
+		- Why using confirmed+0? because confirmed is text type, using this method conver to integer.
+		- The above statement calculates the number of new confirmed per day; the first row is filled with a null value because the data cannot be calculated.
+	- **Restrictions**: Because this extension uses global variables, only one rdelta statement can be used in a single query, if more than one is used, the data will be incorrect;
+16. inter-row string difference counter **cindex(column name)**
+	- Suppose a book book table, record book information by type, table structure: ID text, type text, name text, content as follows:
+	```
+	001 G01 book1
+	002 T11 book2
+	003 G03 book3
+	004 T11 book4
+	005 T11 book5
+	006 G03 book6
+	007 G03 book7
+	```
+- Want to get 2 books from each type, if use group by, only get one book from each type, this function can be implemented simply
+	- select type, ID, name, cindex(type) as cnt from (select * from book order by type) as b where cnt <4 , the result is as follows
+	```
+	G01 001 book1 2
+	G03 003 book3 2
+	G03 006 book6 4
+	T11 002 book2 2
+	T11 004 book4 4
+	```
+		- Using a subquery, sort the data; this ensures that we need the type to be in order, so that we can correctly identify type changes;
+		- In the where condition, we want to get 2 books, but why 4? Because cindex is called 2 times per row (the select statement cindex(type) as cnt part, and the where cnt<4 part), so *2 is needed
+	- **Constraint**: Because this extension uses global variables, only one navg statement can be used in a single query, and using more than one will result in data
+	- **Caution**: The use of the cindex() value in the where condition requires *2, i.e., when you need <10, set it to <10*2
 
 ### 5. Scripting Support
 - 5.1 Scripting Overview
@@ -395,6 +429,7 @@
 - 2022/02/28   V0.88 Add draw scatter function.
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
+- 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 
 ## sqlite references
 - SQlite3 Doc

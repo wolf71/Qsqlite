@@ -4,77 +4,82 @@
            By: Charles Lai
 '''
 
-__version__ = 0.9
+__version__ = 0.91
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.9) ======
- q - quit
- h/? - help
- #/-  comment; three ' for block comment
- l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd 
- ls - List current dir files ; ls *.csv or ls city 
- echo - Display information
- open dbname - open database / open :memory: / open #dbname# (open a mysql db)
- - if db does not exist, will create it.
- db - Show open database name
- mysql - setup a mysql db, mysql dbname server user password ; and then using open #dbname# open it.(server support port,etc: server:3308)
- info 0/1/2/3 - show database info; 0-table / 1-index (for MySQL 2-tables; 3-table struct)
- dinfo on/off - debug info on/off or using dinfo show status
- copy dbname table_insert sqlcmd (insert select data to table_insert)
+====== Qsqlite (Quick Sqlite Tools) Help (V0.91) ======
+# command
+ @ q - quit   h/? - help    @ #/- comment; three ' for block comment
+ @ l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd
+ @ ls - List current dir files; ls *.csv or ls city 
+ @ echo - Display information
+ @ open dbname - open database(if db not exist, auto create it) / open :memory: 
+ @ open #dbname# (open a mysql db)
+ @ mysql - setup a mysql db, mysql dbname server user password ; and then using open #dbname# open it.(server support port,etc: server:3308)
+ @ db - Show open database name  / @ dinfo on/off - debug info on/off or using dinfo show status
+ @ info 0/1/2/3 - show database info; 0-table / 1-index (for MySQL 2-tables; 3-table struct)
+ @ >[ _@1_, _@2_, ...] select result reformat. (_@0_ for order id)
+ @ copy dbname table_insert sqlcmd (insert select data to table_insert)
  - etc: copy new.db tb01 select * from tb00 where age < 100 limit 10
  - !same db,can using: insert into tb01 select a,b,c from tb00 where a<10
- dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
- loadcsv - load csv file and copy to new table
- - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (bypass csv line 1)
- loadjson - load json file and copy to new table
+ @ dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
+ @ loadcsv - load csv file and copy to new table
+ - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (csv line 1 as title)
+ @ >csv file.csv 1/0  export select result to csv file (0/1 - with/without rowinfo)
+ @ loadjson - load json file and copy to new table
  - etc: loadjson file.json table1 item (when item set, it's will select data on json item.)
- loop/lend function . Etc: select i1,i2 from tab / select * from tab where a = _^1_ and b = '_^2_' /lend
+ @ loop/lend function . Etc: select i1,i2 from tab / select * from tab where a = _^1_ and b = '_^2_' /lend
  - or : loop [(1,2,...),(1,2,...)...] / echo _^0_ _^1_ / lend
- draw type sqlcmd (Draw data using matplotlib. type: l-line h-hist v-violin s-scatter)
+ @ draw type sqlcmd (Draw data using matplotlib. type: l-line h-hist v-violin s-scatter)
  - draw l select x_lable,col1,col2 from tab1 (*first col using for matplot x-laxble) / draw ls (subplot mode)
  - draw lx select x,y from tab ( log(x) or log(y) using draw ly ) / draw ll select x,y from tab  (For log(x)/log(y))
- - draw l2 select x,y from tab / l2x,l2y,l2l 
+ - draw l2 select x,y from tab / l2x, l2y, l2l, l2s
  - draw h select col1 from tab1 / hx: x-log hist / hy: y-log hist  /  hl : x-y log hist
  - draw s select y from table / draw s select x,y from table / draw s select x,y,size from table / draw s select x,y,size,color from table
  - Mulit-Draw: draw v select col1 from tab1; draw l select a,b,c from tab2; ...
- html filename / chtml  (save output to a html file / close html file)
- @webserver ip:port / @page url / webinput url name(5) age(3) _type(321) ～Search / _#n_   For webserver support;
- @jobserver / @job / @mail For Job server support;
- database command (select / insert / update ...)
+ @ html filename / chtml  (save output to a html file / close html file)
+ @ webserver ip:port / @page url / webinput url name(5) age(3) _type(321) ~Search / _#n_ 
+ @ jobserver / @job / @mail For Job server support;
+ @ server running on background: Qsqlite scrp.txt >>out.log &  or  nohup Qsqlite scrp.txt &
+ @ select command format
  - select * from table1 limit 1000,10 (start,cnt) 
- -  or select x,y,z from tab where a='123' >[index:_@0_  X=_@1_, Y=_@2_, Z=_@3_]
- -  or select * from tab >csv filename.csv 0/1 (export csv file with/without rowinfo)
- ext function for SQLite:
- - regexp / regfind / destr / csum / power / slist
- -  @ regexp('^[1]([3-9])[0-9]{9}$',mobil)
- -  @ regfind('1(.*?)2','1hello2 1good2',1) -> hello
- -  @ regfn(',','1,2,3,4,5,6') -> 5 (5 match re)
- -  @ regsub('([\d]{3})','#\\1#','Test000-372')  -> Test#000#-#372#
- -  @ destr('123,456,34,456,1',',') -> '123,456,34,1'
- -  @ select mID,csum(mName),count(*) from T group by mID
- -  @ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
- -  @ std function; select std(mM) from T    or  select std(1,2,3,4,5)
- -  @ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
- -  @ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
- -  @ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
- -  @ ctop('1 2 3 4 5',' ',3) -> 1 2 3  (ctop(x,y,z) split string x using y,and return top z item)
- -  @ cindex('@@_0_@@) reset count; select uid,cindex(pid),a,b,c from T group by uid 
+ - select x,y,z from tab where a='123' >[index:_@0_  X=_@1_, Y=_@2_, Z=_@3_]
+ - select * from tab >csv filename.csv 0/1 (export csv file with/without rowinfo)
+ 
+ # ext function for SQLite:
+ @ regexp('^[1]([3-9])[0-9]{9}$',mobil)
+ @ regfind('1(.*?)2','1hello2 1good2',1) -> hello
+ @ regfn(',','1,2,3,4,5,6') -> 5 (5 match re)
+ @ regsub('([\d]{3})','#\\1#','Test000-372')  -> Test#000#-#372#
+ @ destr('123,456,34,456,1',',') -> '123,456,34,1'
+ @ select mID,csum(mName),count(*) from T group by mID
+ @ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
+ @ std function; select std(mM) from T    or  select std(1,2,3,4,5)
+ @ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
+ @ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
+ @ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
+ @ ctop('1 2 3 4 5',' ',3) -> 1 2 3  (ctop(x,y,z) split string x using y,and return top z item)
+ @ cindex(col) select uid, cindex(pid) as cnt, a from T group by uid where cnt<3*2
+ @ navg(row,n)  N row moving average calculation
+ @ rdelta(column name)  inter-row difference calculation
+ 
+ # Sqlite Tips:
  - select distinct * from Table order by random() limit 2 offset 1000 (or limit s,n ==> limit n offset s)
  - select date,code1,code2 from T1 left outer join (select date as d1 from T1 where xxx) on date=d1 left outer join (select d3,code2 from T2 where xxx) on date=d3
  - create table if not exists Roominfo2 (mID text PRIMARY KEY,mName real,mOrg int,PRIMARY KEY(ID ASC)) * can add without rowid 
- -	SQlite data type: text, integer, real, blob
+ - SQlite data type: text, integer, real, blob
  - delete from table where a > 123 / drop table tb001
  - create [unique] index inx1 on table1 (ctime,[name...])  / drop index inx1
  - update A set last = (select t from B where A.time = B.time) where A.code > 30
  - create index u_name on tab1 (col1,...) / drop index u_name
- - VACUUM : optimize the database file (small size)
  - strftime("%s",mETime) Convert string to seconds / strftime('%Y-%m-%d %H:%M:%S','now','localtime') / 'start of month' /'-7 days', 'weekday 5'  %W - week of year(1-54) %w-week(0-6) %j-(1-365)
- - substr(str,begin,len)
  - Sqlite String add using : 'a' || 'b' ; select 'a' || x'0d' || x'0a' || 'apple'
- - cast(x as int) or cast(7/2.0 as int)
+ - cast(x as int) or cast(7/2.0 as int) or x+0 or x+0.0 / substr(str,begin,len)
  - select rowid, * from c (select system rowid); select last_insert_rowid()
- - SQlite system function: count, max, min, avg, sum, random, abs, upper, lower, length, trim, ltrim, rtrim, replace('apple','app','*'), typeof, hex, like('%12%',name) or like('23_33',tel) or like('100\%F%', name, '\'), iif(c,x,y), coalesce(t1,t2,t3...), hex(randomblob(16)), printf('%08d is %.2fs on %-10s %,d', 34123, 3123.334, 'apple',12345) ... 
+ - SQlite system function: count, max, min, avg, sum, substr, random, abs, upper, lower, length, trim, ltrim, rtrim, replace('apple','app','*'), typeof, hex, like('%12%',name) or like('23_33',tel) or like('100\%F%', name, '\'), iif(c,x,y), coalesce(t1,t2,t3...), hex(randomblob(16)), printf('%08d is %.2fs on %-10s %,d', 34123, 3123.334, 'apple',12345) ... 
+ - Explain to see the SQLite execution policy: explain select ID from Room where m > 15
+ - VACUUM : optimize the database file (small size)
 '''
 
 import os, sys, math, re, time, base64, csv
@@ -93,13 +98,22 @@ except:
 # 全局变量初始化
 #
 db, his_cmd = '', []
-# 调试/时间信息输出标志、循环LOOP标志、循环命令缓存、MySQL服务器参数字典、数据库连接字典、SQL扩展变量1、2
-dinfo_flag, loop_flag, loop_cnt, loop_cmd, mysql_srv, srv_conn, sqlext_v, sqlext_s = 0, 0, 0, [], {}, {}, 0, ''
+# 调试/时间信息输出标志、循环LOOP标志、循环命令缓存、MySQL服务器参数字典、数据库连接字典
+dinfo_flag, loop_flag, loop_cnt, loop_cmd, mysql_srv, srv_conn  = 0, 0, 0, [], {}, {}
+# Sqlite 扩展函数用到的全局变量
+sqlext_v, sqlext_s, navg_sum, navg_n, rdelta_tmp = 0, '', [], 0, None
 # html 输出文件句柄, 是否有<ul>标志
 f_html, ul, ul1 = None, 0, 0
 # Web服务器执行命令缓存
 wcmd = {}
 
+#
+# Sqlite 扩展函数全局变量复位函数
+#
+def Sqlite_ext_reset():
+	global sqlext_v, sqlext_s, navg_sum, navg_n, rdelta_tmp
+	# 这些全局变量在每次函数执行后，需要进行复位
+	sqlext_v, sqlext_s, navg_sum, navg_n, rdelta_tmp = 0, '', [], 0, None
 
 #
 # Web 服务器
@@ -446,20 +460,51 @@ def destr(input,sstr):
 	return sstr.join(sorted(set(l),key=l.index)).strip()
 
 #
-# 针对同一个传入变量，提供自增计数器，即当输入参数没有变化，每次调用返回值+1，直到输入参数变化，则从1再开始计算
-#  可以用 select cindex('@@_0_@@') 来强制重置计数器
+# 为一个字段提供行自增计数器，即当该行的值和上一行没有变化，每次调用返回值+1，直到值变化，则从1再开始计算
 #
 def cindex(input):
 	global sqlext_v, sqlext_s
 	s = str(input)
-	# 如果切换新变量 或 清除参数，则清零
-	if s == '@@_0_@@':
-		sqlext_v, sqlext_s = 0, ''
-	elif sqlext_s != s:
+	# 如果 值发生变化, 则清零; 否则递增计数器
+	if sqlext_s != s:
 		sqlext_v, sqlext_s = 1, s
 	else:
 		sqlext_v += 1
 	return sqlext_v
+
+#
+# 计算两行之间的差值 (Row n+1 - Row n)
+#
+def rdelta(input):
+	global rdelta_tmp
+	# 如果有预存值，则计算差值返回; 否则返回 None
+	if rdelta_tmp:
+		retval = input - rdelta_tmp
+	else:
+		retval = None
+	# 将当前值保存到临时变量
+	rdelta_tmp = input
+	# 返回结果
+	return retval
+
+#
+# 移动平均值计算函数 (输入数据序列-数字类型, n-表示累计多少行后开始计算平均值,例如7天均值)
+#
+def navg(input, n):
+	global navg_sum, navg_n
+	# 累加值 和 统计次数
+	navg_sum.append(input)
+	# 判断是否符合计算要求, 如果符合要求，计算均值，重设两个累加变量; 否则返回空值(因为还无法计算)
+	if navg_n == n-1:
+		retval = sum(navg_sum) / n
+		# 将最前面一个值弹出
+		navg_sum.pop(0)
+	else:
+		navg_n += 1
+		retval = None
+	# 返回结果
+	return retval
+
 #
 # 身份证校验函数 （输入身份证前17位,返回最后一位)；
 #
@@ -556,7 +601,6 @@ class Cstd:
 		z = [(m-i)**2 for i in self.count]
 		# 汇总方差，而后开平方得到标准差
 		return ( sum(z)/len(z) ) ** 0.5
-
 
 #
 # 根据f_html文件句柄，确定文件输出/屏幕输出 (对于输出到文件，提供简单Markdown转换html功能)
@@ -687,7 +731,7 @@ def dbconn(dbname):
 			# 设置连接参数
 			cx.row_factory = sqlite3.Row
 			# 为SQLite 添加扩展函数 
-			# create_function参数：用户定义函数名, 函数接受的参数的个数(具体值、正则），对应的 Python 函数
+			# create_function参数：用户定义函数名, 函数接受的参数的个数, 对应的 Python 函数
 			# create_function 可以创建同一个名字，但是参数个数不同的函数，例如： ('regabc',1,reg1)  ('regabc',2,reg2)
 			# 参数个数-1表示接受任意参数： create_function('concat', -1, lambda x, y, sep=',' : "%s%s%s" % (x, sep, y))
 			# 对于-1，可以这样接收参数：create_function('csv', -1, lambda *args : ','.join(map(repr, args)) )
@@ -708,8 +752,10 @@ def dbconn(dbname):
 			# sum([float(i) if re.match('^[-+]?[0-9]*\.?[0-9]+$',i) else 0.0  for i in x.split(y)])) 速度慢4倍 放弃容错
 			cx.create_function('sumc', 2, lambda x,y : sum([float(i) for i in x.split(y)]) )
 			cx.create_function('cindex', 1, cindex )
-			cx.create_aggregate("csum", -1, StrSum)
-			cx.create_aggregate("std", -1, Cstd)
+			cx.create_function('navg', 2, navg )
+			cx.create_function('rdelta', 1, rdelta )
+			cx.create_aggregate('csum', -1, StrSum)
+			cx.create_aggregate('std', -1, Cstd)
 	# 返回连接串、连接类型
 	return cx, cxt
 
@@ -1020,7 +1066,7 @@ def getSQLiteInfo(sqlite_db,type=0):
 # SQLite Query
 #		跟在Select后面的输出类型： >[_@0_ _@1_] 输出格式化信息； >csv 文件名 输出csv 文件； ??>{name}输出到变量??
 #
-def SQLiteQuery(sqlite_db,sql):
+def SQLiteQuery(sqlite_db, sql):
 	# 通过正则判断 select 语句后面带有 >[ xxx ]内容，如果是，则表示输出内容需要拼接
 	c = re.findall('(.*)\>\[(.*)\]',sql)
 	o, csv_flag = '', 0
@@ -1047,6 +1093,7 @@ def SQLiteQuery(sqlite_db,sql):
 	bt = time.time()
 	cx, cxt = dbconn(sqlite_db)
 	cu = cx.cursor()
+	Sqlite_ext_reset()
 	cu.execute(sql)
 	# 统计查询耗时
 	if dinfo_flag: print('* Query spent time: %.2f s *'%(time.time() - bt))
@@ -1059,9 +1106,9 @@ def SQLiteQuery(sqlite_db,sql):
 				rcol = [i[0] for i in cu.description]
 			else:
 				rcol = row.keys()
-			# 输出/写入csv文件
 			if dinfo_flag: print('--',' '.join(rcol),'--')
-			if csv_flag > 1: csv_f.writerow(rcol) #f.write(','.join(rcol) + '\n')
+			# 输出/写入csv文件
+			if csv_flag > 1: csv_f.writerow(rcol)
 		if o:
 			tmp = o
 			# 替换所有内容
@@ -1071,7 +1118,6 @@ def SQLiteQuery(sqlite_db,sql):
 			oprint(tmp.replace('_@0_',str(cnt)))
 		else:
 			if csv_flag:
-				#f.write( ','.join([str(j).replace(',','，') for j in row]) + '\n' )
 				csv_f.writerow( row )
 			else:
 				oprint( '-%d %s'%(cnt,' '.join([str(j) for j in row])) )
@@ -1099,6 +1145,7 @@ def SQliteCopy(sqlite_db,ndb,table_insert,sql):
 	cu = cx.cursor()
 	cx2,cxt2 = dbconn(ndb)
 	cu2 = cx2.cursor()
+	Sqlite_ext_reset()
 	cu.execute(sql)
 	cnt, rcnt = 0, ''
 	dbtype = check_mysql(ndb)
@@ -1211,6 +1258,7 @@ def SQliteDraw(sqlite_db, cmd):
 		# Connect SQLite
 		cx,cxt = dbconn(sqlite_db)
 		cu = cx.cursor()
+		Sqlite_ext_reset()
 		cu.execute(sql)
 		data = {}
 		rcnt = 0		# 累计列数
@@ -1438,6 +1486,7 @@ def proc_cmd(cmd0):
 						# Connect SQLite
 						cx,cxt = dbconn(db)
 						cu = cx.cursor()
+						Sqlite_ext_reset()
 						cu.execute(loop_cmd[-1][0])
 						res = cu.fetchall()
 					else:
@@ -1568,7 +1617,7 @@ def main():
 						httpd.serve_forever()
 				except KeyboardInterrupt:
 						# 直接清空指令，退出
-					print('WebServer Stop...')
+					print(' WebServer Stop...')
 				finally:
 					httpd.server_close()
 			#
@@ -1582,7 +1631,7 @@ def main():
 					try:
 						JobServer(wcmd)
 					except KeyboardInterrupt:
-						print('JobServer Stop...')
+						print(' JobServer Stop...')
 				#
 				# 3. 解析普通脚本文件，并执行
 				#
@@ -1593,7 +1642,7 @@ def main():
 			print('!!! Script File not found.')
 	# 交互命令行操作
 	else:
-		print('> SQLite Cmd/Script Tools, h - Help, q - Quit.')
+		print('> Quick SQLite Cmd/Script Tools V%s (h - Help, q - Quit)'%__version__)
 		while True:
 			try:
 				cmd0 = input('> ').strip()
