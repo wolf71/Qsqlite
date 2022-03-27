@@ -151,14 +151,30 @@
   - **draw ls** plots multiple columns of data on different **subplots**, side by side;
 		- draw ls select x_label, y1, y2 from table (draw two sub-plot, one is x_label, y1, other is x_label, y2)
 		- draw lsy select x_label, y1, y2 from table (draw two sub-plot and ogarithmic processing of Y-axis)
-- 3.3 **draw h** plots the distribution (histogram), taking only the first column of the result set; 
+- 3.3 **draw b** bar plot, plot one or more sets of data，
+  - One dataset, as Y-coordinate, automatically generates X-coordinate from 0-N.
+		- draw b select y from table
+  - Two data sets, then as X label, Y coordinates.
+		- draw b select x_label, y from table
+  - Multiple data sets, the first one as X_label, The latter all as Y-coordinates, superimposed.
+		- draw b select x_label, y1, y2, ... from table
+  - **draw b2** means the data of X-axis is not the system generated 0-N equal scale data, but the first item of select result.
+		- draw b2 select x, y1, y2 from table
+		- draw b2 select x, y1, y2, y3 from table
+		- draw b2x select x, y from table (logarithmic processing of X-axis) 
+		- draw b2l select x, y from table (double logarithmic processing of X-Y-axis)
+  - **draw bx** means logarithmic processing of X-axis; **draw by** means logarithmic processing of Y-axis; **draw bl** means double logarithmic processing of X-Y-axis;
+  - **draw bs** plots multiple columns of data on different **subplots**, side by side;
+		- draw bs select x_label, y1, y2 from table (draw two sub-plot, one is x_label, y1, other is x_label, y2)
+		- draw bsy select x_label, y1, y2 from table (draw two sub-plot and ogarithmic processing of Y-axis)
+- 3.4 **draw h** plots the distribution (histogram), taking only the first column of the result set; 
   - **draw hx** indicates logarithmic processing of the x-axis of the distribution; 
   - **draw hy** denotes logarithmic processing of the Y-axis of the distribution;
   - **draw hl** denotes double logarithmic processing of the X-Y axis;
-- 3.4 **draw v** means to draw the violin box distribution, taking only the first column of the result set;
-- 3.5 **draw multiple** function, which plots different types of plots in a single output image in subplot mode, and divides the subplots by ;. For example, the following example will draw 4 subgraphs
+- 3.5 **draw v** means to draw the violin box distribution, taking only the first column of the result set;
+- 3.6 **draw multiple** function, which plots different types of plots in a single output image in subplot mode, and divides the subplots by ;. For example, the following example will draw 4 subgraphs
   - draw l select a,b,c from t1; draw hl select a from t2; draw ll select a,b from t3; draw v select a from t4
-- 3.6 The demo script for the Draw function can be found in the qdraw.txt script file in the Demo directory. Run it with python3 Qsqlite.py qdraw.txt, and a city_map.html file will be generated. (Note: The demo script will use the cn_city_l3_xy.csv and cn_city_l2_xyp.csv files in the demo directory, please make sure they exist)
+- 3.7 The demo script for the Draw function can be found in the qdraw.txt script file in the Demo directory. Run it with python3 Qsqlite.py qdraw.txt, and a city_map.html file will be generated. (Note: The demo script will use the cn_city_l3_xy.csv and cn_city_l2_xyp.csv files in the demo directory, please make sure they exist)
 
 ### 4. SQLite extended functions
 1. row string accumulation: **csum(column name)**, like SQLite's default sum() function, sum() sum the values of each column and returns the total; while csum() combine each column as a string.
@@ -387,15 +403,23 @@
 ### 9. Python, iPython or Jupyter 
 - In Python program or iPython notebook, you can import Qsqlite.
 ```python
-	# import Qexec
-	from Qsqlite import Qexec
+	# import Qexec, Qselect
+	from Qsqlite import Qexec, Qselect
 	script = '''
 		open :memory:
 		create table test (id text, name text)
 		insert into test values('123','Apple')
+		insert into test values('678','Google')
 		select * from test
 	'''
 	Qexec(script)
+	# Qselect( dbname, select command )
+	row_info, result = Qselect(':memory:', 'select * from test')
+	# row_info ['id', 'name']
+	print(row_info)
+	# select result  [ ['123', 'Apple'], ['678', 'Google'] ]
+	print(result)
+	# you can using row_info, result in your program
 ```
 - Please check demo directory qnotebook.ipynb file for the complete demo.
 
@@ -430,6 +454,7 @@
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
+- 2022/3/27    V0.92 Add draw bar function and add Qselect function.
 
 ## sqlite references
 - SQlite3 Doc

@@ -4,4 +4,4 @@
            By: Charles Lai
 '''
 
-from Qsqlite.Qsqlite import Qexec, main, __version__, __author__ 
+from Qsqlite.Qsqlite import Qexec, Qselect, main, __version__, __author__ 

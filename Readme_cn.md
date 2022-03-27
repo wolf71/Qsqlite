@@ -151,14 +151,30 @@
   - **draw ls** 将多个数据列，绘制在不同的 **子图** 上，并列排放;
 		- draw ls select x_label, y1, y2 from table (绘制两个子图, 一个是 x_label, y1, 另一个是 x_label, y2)
 		- draw lsy select x_label, y1, y2 from table (绘制两个子图, 都对 Y轴进行对数处理)
-- 3.3 **draw h** 绘制分布图(直方图), 只取结果集的第一列; 
+- 3.3 **draw b** 绘制柱状图, 可绘制一组或多组数据
+	- 一个数据集, 作为 Y 坐标, 自动生成 0-N 的X坐标
+		- draw b select y from table
+	- 两个数据集, 则第一个数据集作为 X 轴标签, 第二个作为 Y 坐标
+		- draw b select x_lable, y from table
+	- 多个数据集, 则第一个数据集作为 X 轴标签, 后面都作为 Y 坐标, 叠加比较显示
+		- draw b select x_lable, y1, y2 from table
+  - **draw b2** 表示 X 轴的数据不是系统产生的 0-N 的等比例数据, 而是用 select 结果第一项
+		- draw b2 select x, y from table
+		- draw b2 select x, y1, y2, y3 from table
+		- draw b2x select x, y from table (x轴对数处理) 
+		- draw b2l select x, y from table (x-y轴双对数处理)
+  - **draw bx** 表示对 X 轴进行对数处理; **draw by** 表示对 Y 轴进行对数处理;  **draw bl** 表示进行 X-Y 轴进行双对数处理;
+  - **draw bs** 将多个数据列，绘制在不同的 **子图** 上，并列排放;
+		- draw bs select x_label, y1, y2 from table (绘制两个子图, 一个是 x_label, y1, 另一个是 x_label, y2)
+		- draw bsy select x_label, y1, y2 from table (绘制两个子图, 都对 Y轴进行对数处理)
+- 3.4 **draw h** 绘制分布图(直方图), 只取结果集的第一列; 
   - **draw hx** 表示对 分布图的 X 轴进行对数处理; 
   - **draw hy** 表示对 分布图的 Y 轴进行对数处理;
   - **draw hl** 表示对 X-Y 轴双对数处理;
-- 3.4 **draw v** 表示绘制小提琴箱型分布图，只取结果集第一列;
-- 3.5 **多图绘制**功能, 将不同的类型图，通过子图模式，绘制在一个输出图片里, 子图之间用 ; 分割。 例如下面例子将绘制4个子图
+- 3.5 **draw v** 表示绘制小提琴箱型分布图，只取结果集第一列;
+- 3.6 **多图绘制**功能, 将不同的类型图，通过子图模式，绘制在一个输出图片里, 子图之间用 ; 分割。 例如下面例子将绘制4个子图
   - draw l select a,b,c from t1; draw hl select a from t2; draw ll select a,b from t3; draw v select a from t4
-- 3.6 Draw 功能演示脚本，可参考 Demo 目录下的 qdraw.txt 脚本文件. 用 python3 Qsqlite.py qdraw.txt 运行, 而后会生成一个 city_map.html 文件. (注意: 该演示脚本会用到 demo 目录下的 cn_city_l3_xy.csv, cn_city_l2_xyp.csv 两个文件，请确保这两个文件存在)
+- 3.7 Draw 功能演示脚本，可参考 Demo 目录下的 qdraw.txt 脚本文件. 用 python3 Qsqlite.py qdraw.txt 运行, 而后会生成一个 city_map.html 文件. (注意: 该演示脚本会用到 demo 目录下的 cn_city_l3_xy.csv, cn_city_l2_xyp.csv 两个文件，请确保这两个文件存在)
 
 ### 4. SQLite 扩展函数
 1. 行字符串累加: **csum(列名)**，就像SQLite的默认sum()函数，sum()累加每列的值，返回总数；而csum()将每列作为字符串拼接起来;
@@ -385,15 +401,23 @@
 ### 9. Python, iPython or Jupyter 
 - 在 Python 程序或 iPython notebook 中, 可导入 Qsqlite 的库
 ```python
-	# import Qexec
-	from Qsqlite import Qexec
+	# import Qexec, Qselect
+	from Qsqlite import Qexec, Qselect
 	script = '''
 		open :memory:
 		create table test (id text, name text)
 		insert into test values('123','Apple')
+		insert into test values('678','Google')
 		select * from test
 	'''
 	Qexec(script)
+	# Qselect( dbname, select command )
+	row_info, result = Qselect(':memory:', 'select * from test')
+	# row_info ['id', 'name']
+	print(row_info)
+	# select result  [ ['123', 'Apple'], ['678', 'Google'] ]
+	print(result)
+	# you can using row_info, result in your program	
 ```
 - 完整的演示，可以参考 demo 目录下的 qnotebook.ipynb 笔记程序
 
@@ -427,6 +451,7 @@
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
+- 2022/3/27    V0.92 Add draw bar function and add Qselect function.
 
 ## sqlite 参考资料
 - SQlite3 Doc

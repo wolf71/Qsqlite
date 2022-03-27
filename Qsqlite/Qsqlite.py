@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.91
+__version__ = 0.92
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.91) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.92) ======
 # command
  @ q - quit   h/? - help    @ #/- comment; three ' for block comment
  @ l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd
@@ -35,7 +35,9 @@ help_str = '''
  - draw l select x_lable,col1,col2 from tab1 (*first col using for matplot x-laxble) / draw ls (subplot mode)
  - draw lx select x,y from tab ( log(x) or log(y) using draw ly ) / draw ll select x,y from tab  (For log(x)/log(y))
  - draw l2 select x,y from tab / l2x, l2y, l2l, l2s
+ - draw b for bar darw, all arg like draw l; etc draw bs / draw b2 / draw b2x ...
  - draw h select col1 from tab1 / hx: x-log hist / hy: y-log hist  /  hl : x-y log hist
+ - draw v select col1 from tab1  draw the violin box distribution
  - draw s select y from table / draw s select x,y from table / draw s select x,y,size from table / draw s select x,y,size,color from table
  - Mulit-Draw: draw v select col1 from tab1; draw l select a,b,c from tab2; ...
  @ html filename / chtml  (save output to a html file / close html file)
@@ -82,7 +84,9 @@ help_str = '''
  - VACUUM : optimize the database file (small size)
 '''
 
+from logging import raiseExceptions
 import os, sys, math, re, time, base64, csv
+from signal import raise_signal
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, unquote
@@ -707,7 +711,10 @@ def dbconn(dbname):
 			SQLite_opt = 1					# 设置扩展执行标志
 		# 如果是 MySQL 数据库
 		elif my:
-			import pymysql
+			try:
+				import pymysql
+			except ModuleNotFoundError:
+				print('# Please install pymysql, using: pip3 install pymysql')
 			mysql = mysql_srv.get(my[0])
 			if mysql:
 				# 根据 MySQL 服务器参数，获取正确的端口号
@@ -1065,8 +1072,8 @@ def getSQLiteInfo(sqlite_db,type=0):
 #
 # SQLite Query
 #		跟在Select后面的输出类型： >[_@0_ _@1_] 输出格式化信息； >csv 文件名 输出csv 文件； ??>{name}输出到变量??
-#
-def SQLiteQuery(sqlite_db, sql):
+#		o_disp 参数默认为1, 输出信息; 只有在被作为 import 调用时, 才设置为0, 屏蔽所有输出信息
+def SQLiteQuery(sqlite_db, sql, o_disp=1):
 	# 通过正则判断 select 语句后面带有 >[ xxx ]内容，如果是，则表示输出内容需要拼接
 	c = re.findall('(.*)\>\[(.*)\]',sql)
 	o, csv_flag = '', 0
@@ -1096,8 +1103,10 @@ def SQLiteQuery(sqlite_db, sql):
 	Sqlite_ext_reset()
 	cu.execute(sql)
 	# 统计查询耗时
-	if dinfo_flag: print('* Query spent time: %.2f s *'%(time.time() - bt))
+	if dinfo_flag and o_disp: print('* Query spent time: %.2f s *'%(time.time() - bt))
 	cnt = 1
+	# 返回结果列表(rcol:列名, retv:结果集)
+	rcol, retv = [], []
 	for row in cu:
 		# 如果第一行，则打印/输出 表结构信息 (可以用 row['name']来访问，替代row[2])
 		if cnt == 1:
@@ -1106,7 +1115,7 @@ def SQLiteQuery(sqlite_db, sql):
 				rcol = [i[0] for i in cu.description]
 			else:
 				rcol = row.keys()
-			if dinfo_flag: print('--',' '.join(rcol),'--')
+			if dinfo_flag and o_disp: print('--',' '.join(rcol),'--')
 			# 输出/写入csv文件
 			if csv_flag > 1: csv_f.writerow(rcol)
 		if o:
@@ -1115,13 +1124,14 @@ def SQLiteQuery(sqlite_db, sql):
 			for j, d in enumerate(row):
 				tmp = tmp.replace('_@'+str(j+1)+'_',str(d))
 			# 输出前，将_@0_替换为顺序号
-			oprint(tmp.replace('_@0_',str(cnt)))
+			if o_disp: oprint(tmp.replace('_@0_',str(cnt)))
 		else:
 			if csv_flag:
 				csv_f.writerow( row )
 			else:
-				oprint( '-%d %s'%(cnt,' '.join([str(j) for j in row])) )
+				if o_disp: oprint( '-%d %s'%(cnt,' '.join([str(j) for j in row])) )
 		cnt += 1
+		retv.append( [j for j in row] )
 	# 表示 结果集 为空, 可能是update/del等语句，从 cx.total_changes 获取影响行数
 	if cnt == 1:
 		cnt = cu.rowcount
@@ -1129,12 +1139,14 @@ def SQLiteQuery(sqlite_db, sql):
 		cnt -= 1
 	if csv_flag:
 		f.close()
-		print('-- Total Write %d lines to csv file.'%(cnt))
+		if o_disp: print('-- Total Write %d lines to csv file.'%(cnt))
 	elif not o:
-		print('------ Total: %d ------ '%(cnt))
+		if o_disp: print('------ Total: %d ------ '%(cnt))
 	cx.commit()
 	cu.close()
 	if cxt: cx.close()		# 如非内存连接，则关闭
+	# 返回执行的结果 (列信息, 数据集)
+	return rcol, retv
 
 #
 # insert select data to table_insert
@@ -1212,12 +1224,15 @@ def dumpMySQL(mysql_db,sqlite_db):
 #
 # Draw data using matplotlib
 # type: L-line LX-Log line X LY-Log line Y LL-Log line X and Y; LS - Subplot Line;  L2 / L2X L2Y L2L
-# 			H-hist HL-hist log, HLL-hist double log;  V-violin;  S-scatter
+#       B-Bar  BX/BY/BL log   BS- subplot  B2
+# 			H-hist HL-hist log, HLL-hist double log;
+#       V-violin;
+#       S-scatter
 # 支持 draw l select * from a; draw h select * from b  (将多个绘制在子图内)
 # 
 def SQliteDraw(sqlite_db, cmd):
 	# 解析命令串(多个 draw 放在一起，用于将图绘制在子图里)
-	r = re.findall('(draw ([lshv].*?) (select .+?)(?:$|;))',cmd,flags=re.IGNORECASE)
+	r = re.findall('(draw ([lsbhv].*?) (select .+?)(?:$|;))',cmd,flags=re.IGNORECASE)
 	n_sub = len(r)	# 多少个 draw 指令
 	# 如果无法找到正确参数，则退出
 	if not n_sub:
@@ -1225,22 +1240,27 @@ def SQliteDraw(sqlite_db, cmd):
 		return -1
 	# 参数检测
 	for i in r:
-		# 检查正则解析出来的内容是否正确 i[1]-参数 i[2]-select语句
+		# 检查正则解析出来的内容是否正确 i[0]-完整语句  i[1]-参数 i[2]-select语句
 		if len(i) != 3:
 			print('!!! Multi-Draw cmd error,Please Check.')
 			return 1
-		# 如果子图模式中，存在 ls 这种也包括子图的，报错并退出
-		elif n_sub > 1 and i[1].upper() == 'LS':
-			print('Multi-Draw include draw ls, Please remove it.')
+		# 如果子图模式中，存在 ls/bs 这种也包括子图的，报错并退出
+		elif n_sub > 1 and i[1].upper().find('S') > 0:
+			print('Multi-Draw include draw ls/bs, Please remove it.')
 			return 1
 	# 获取数据、绘制图形
-	import matplotlib.pyplot as plt
+	try:
+		import matplotlib.pyplot as plt
+	except ModuleNotFoundError:
+		print('# Please install matplotlib, using: pip3 install matplotlib')
+		return -1
 	# 设置 Plot 绘制多条线的颜色顺序 for name, hex in matplotlib.colors.cnames.items():
-	plt_color = ('blue','green','red','cyan','magenta','yellow','coral','#1f77b4')
+	# plt_color = ('#1f77b4','blue','green','red','cyan','magenta','yellow','coral')
+	plt_color = ('#17becf', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22')
 	# 通过子图数量，构建子图参数；每行3个子图，因此只需要计算列
 	# matplotlib 默认 fig_size(6.4,4.8) 4:3结构
-	if n_sub > 1 or r[0][1].upper() == 'LS':
-		sub_x,sub_y = 3 if n_sub>3 else n_sub, n_sub//3 + (1 if n_sub % 3 > 0 else 0)
+	if n_sub > 1 or r[0][1].upper().find('S') > 0:
+		sub_x, sub_y = 3 if n_sub>3 else n_sub, n_sub//3 + (1 if n_sub % 3 > 0 else 0)
 		fig_size_x, fig_size_y = 9, 3.6 * sub_y		# 多子图尺寸
 	else:
 		fig_size_x, fig_size_y = 8.4, 4.2			# 无子图尺寸
@@ -1252,8 +1272,8 @@ def SQliteDraw(sqlite_db, cmd):
 	for i in r:
 		sub_cnt += 1				# 当前子图序号
 		type, sql = i[1].upper(), i[2]
-		# 设置子图
-		if n_sub > 1 and type != 'LS':
+		# 设置子图 (有子图,并且不存在 LS/BS 这类设置)
+		if n_sub > 1 and type.find('S') == -1:
 			plt.subplot(sub_y,sub_x,sub_cnt)
 		# Connect SQLite
 		cx,cxt = dbconn(sqlite_db)
@@ -1261,62 +1281,23 @@ def SQliteDraw(sqlite_db, cmd):
 		Sqlite_ext_reset()
 		cu.execute(sql)
 		data = {}
+		row_name = []
 		rcnt = 0		# 累计列数
 		cnt = 0			# 累计行数
 		# 查询数据库，构建结果集 {0:[col1...],1:[col2...]...}
 		for i in cu.fetchall():
 			cnt += 1
-			if rcnt == 0: rcnt = len(i)
+			# 获取结果列数量, 列名
+			if rcnt == 0:
+				rcnt = len(i)
+				row_name = i.keys()
 			for j in range(rcnt):
 				if data.get(j): 
 					data[j].append(i[j])
 				else:
 					data[j] = [i[j]]
-		# 折线图 (规则：结果1列，作为Y轴，X轴系统生成；2列，第一列作为X，第二列作为Y；超过2列，第一列X，其它都是Y轴，不同颜色绘制)
-		if type[:1] == 'L':
-			# 若超过一列, 且L2参数设置, 使用第一列作为X(转浮点); 否则自动构建X轴
-			if rcnt > 1 and type[0:2] == 'L2':
-				x = [float(i) for i in data[0]]
-			else:
-				x = [i for i in range(cnt)]
-			# Y轴开始列（如果只有一列，从0开始，否则从1开始）
-			start_p = 0 if rcnt == 1 else 1
-			color = 0
-			# 循环绘制对应的 Y 轴数据
-			for i in range(start_p, rcnt):
-				# 如果需要绘制子图，则创建对应子图
-				if type[:2] == 'LS' and rcnt > 2: plt.subplot(1,rcnt-1,i)
-				# 根据 data[i] 数据，将None值部分的X,Y数据剔除 (例如有些数据是 [3,None,None,4,None,None,5] -> [3,4,5]，对应x轴也需要去掉None的部分)
-				xx, dd = [], []
-				for n, tt in enumerate(data[i]):
-					if tt is not None:
-						xx.append(x[n])
-						dd.append(float(tt))
-				# 根据对应参数，绘制标准、X轴、Y轴对数、双对数图 (X,Y,L)
-				plt.plot(xx, dd, color=plt_color[color%8])
-				color += 1
-				# 根据最后面参数(X/Y/2)，确定 对数 坐标
-				if len(type) > 1:
-					lt = type[-1:]
-					if lt == 'X' or lt == 'L': plt.xscale('log')
-					if lt == 'Y' or lt == 'L': plt.yscale('log')
-				# 对于 X 轴非系统生成，且非双对数处理，则设置标签
-				# 默认按照32等分，如果多子图，则相应缩减
-				if rcnt > 1 and (i == rcnt - 1 or type[:2] == 'LS') and type != 'LL' and type != 'LX' and type[0:2] !='L2':
-					xlen = len(data[0])
-					# 32 等分x坐标轴，绘制标签文字 / 如果多子图，则相应调整
-					if n_sub > 1:
-						ss = int(32.0/n_sub)
-					elif type[:2] == 'LS':
-						ss = int(32.0/(rcnt-1))
-					else:
-						ss = 32
-					x1 = [k for k in range(0,xlen,1 if xlen < ss else int(xlen/ss))]
-					x2 = [data[0][k] for k in range(0,xlen,1 if xlen < ss else int(xlen/ss))]
-					plt.tick_params(labelsize=7)
-					plt.xticks(x1, x2, rotation=90)
 		# 分布图/直方图 (HX:x轴对数分布，HY:Y轴对数，HL:双对数分布)
-		elif type[0:1] == 'H':
+		if type[0:1] == 'H':
 			# 为避免一些字符类型的数字，因此进行 float() 转换
 			odata = [ float(i) for i in data[0] ]
 			if type == 'HX' or type == 'HL':
@@ -1347,6 +1328,49 @@ def SQliteDraw(sqlite_db, cmd):
 				plt.scatter([ float(i) for i in data[0] ], [ float(i) for i in data[1] ], s=[ float(i) for i in data[2] ], c=data[3])
 			else:
 				print('#参数不足以绘制散点图，最少需要两个参数,例如: draw s select x,y from table')
+		# 柱状图(B) / 折线图(L)
+		elif type[0:1] == 'B' or type[0:1] == 'L':
+			# 数据集数量>1 并且设置 2 参数(将第一个数据集作为X轴)
+			if rcnt > 1 and type.find('2') > 0:
+				x = [float(i) for i in data[0]]
+			else:
+				x = [float(i) for i in range(cnt)]
+			# 除第一个数据集外，其它都作为 Y 数据集绘制 (如果只有一个数据集,则作为 Y 绘制)
+			for i in range(1 if rcnt>1 else 0, rcnt):
+				# 如果 BS 则表示单独绘制, 因此创建子图; 否则叠加绘制(叠加绘制需要处理坐标偏移)
+				if rcnt > 1 and type.find('S') > 0:
+					plt.subplot(1, rcnt-1, i)
+					s_step = 0
+					pwidth = 0.8
+				else:
+					# 如果 rcnt>1, 叠加绘制计算 bar 宽度:  0.8/(rcnt-1)
+					s_step = 0.8 if rcnt==1 else 0.8 / (rcnt-1)
+					pwidth = s_step
+				if type[0:1] == 'B':
+					# 计算 X 轴位置的时候，根据需要进行 -/+ 偏移, 以便并排显示
+					plt.bar( [dx + s_step*(i-rcnt/2) for dx in x], [ float(dy) for dy in data[i] ], width = pwidth, color=plt_color[i%10], label=row_name[i] )
+				else:
+					plt.plot( [dx for dx in x], [ float(dy) for dy in data[i] ], color=plt_color[i%10],label=row_name[i] )
+				# 绘制标注
+				plt.legend(prop={'size': 7})
+				# 对数处理 (因为 L可能与第一个 L混淆，因此 find() 需要从1开始, 排除掉0位的L干扰)
+				if type.find('L', 1) > 0 or type.find('X') > 0: plt.xscale('log')
+				if type.find('L', 1) > 0 or type.find('Y') > 0: plt.yscale('log')
+				# 如果属于需要处理标签的 (没有 b2 , 并且没有对 X 轴进行 log处理)
+				if type.find('2') < 0 and type.find('L', 1) < 0 and type.find('X') < 0:
+					# 计算 x 轴标签数量 (默认32个, 如果多子图或bs参数, 则相应缩减)
+					xlen = len(x)
+					if n_sub > 1:
+						ss = 16 if n_sub == 2 else 12			# 多子图模式, 横向最多3个
+					# 如果是 BS 子图绘制, 则按子图个数等比缩减
+					elif s_step == 0:
+						ss = ss = int(32.0/(rcnt-1))
+					else:
+						ss = 32
+					x1 = [k for k in range(0, xlen, 1 if xlen < ss else int(xlen/ss))]
+					x2 = [data[0][k] for k in range(0, xlen, 1 if xlen < ss else int(xlen/ss))]
+					plt.tick_params(labelsize=7)
+					plt.xticks(x1, x2, rotation=90)
 
 		# 如需关闭数据库连接，则关闭
 		if cxt: cx.close()
@@ -1591,6 +1615,12 @@ def Qexec(cmd):
 						proc_cmd(i)
 	except KeyboardInterrupt:
 		print('!!! Ctrl+c Break.')
+
+#
+# Qselect 执行查询语句, 返回行信息, 结果集
+#
+def Qselect(db, cmd):
+	return SQLiteQuery(db, cmd, 0)
 
 #
 # Main
