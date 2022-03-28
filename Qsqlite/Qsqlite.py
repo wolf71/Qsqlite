@@ -58,6 +58,7 @@ help_str = '''
  @ select mID,csum(mName),count(*) from T group by mID
  @ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
  @ std function; select std(mM) from T    or  select std(1,2,3,4,5)
+ # median function; select median(mM) from t or select median(1,3,2,5,4)
  @ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
  @ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
  @ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
@@ -606,6 +607,40 @@ class Cstd:
 		# 汇总方差，而后开平方得到标准差
 		return ( sum(z)/len(z) ) ** 0.5
 
+# median: 中位数计算函数
+class median:
+	def __init__(self):
+		self.count = []
+
+	# 每一行数据会调用这里(数据进行转换)
+	def step(self, *value):
+		for i in value:
+			try:
+				self.count.append(float(i))
+			except:
+				pass
+
+		# 最后返回结果
+	def finalize(self):
+		# 根据数据数量获取中间位置(p1,p2)
+		s = len(self.count)
+		if s > 0:
+			# 如果是偶数, 则获取中间两个的值, 而后计算平均值, 例如 [2,3,4,5] 应该计算 (3+4)/2
+			if s % 2 == 0:
+				p1 = s/2 - 1
+				p2 = p1 + 2
+			# 如果是奇数, 获取中间值, 例如 [2,3,4] -> 3
+			else:
+				p1 = (s-1) / 2
+				p2 = p1 + 1
+			# 对数据进行排序, 而后获取
+			self.count.sort()
+			v = self.count[int(p1) : int(p2)]
+			# 计算中位数 (对于偶数个数需要计算两个数的均值)
+			return sum(v) / len(v)
+		else:
+			return None
+
 #
 # 根据f_html文件句柄，确定文件输出/屏幕输出 (对于输出到文件，提供简单Markdown转换html功能)
 #
@@ -763,6 +798,7 @@ def dbconn(dbname):
 			cx.create_function('rdelta', 1, rdelta )
 			cx.create_aggregate('csum', -1, StrSum)
 			cx.create_aggregate('std', -1, Cstd)
+			cx.create_aggregate('median', -1, median)
 	# 返回连接串、连接类型
 	return cx, cxt
 
@@ -1131,7 +1167,8 @@ def SQLiteQuery(sqlite_db, sql, o_disp=1):
 			else:
 				if o_disp: oprint( '-%d %s'%(cnt,' '.join([str(j) for j in row])) )
 		cnt += 1
-		retv.append( [j for j in row] )
+		# 只在 o_disp == 0 的时候保存数据
+		if o_disp == 0: retv.append( [j for j in row] )
 	# 表示 结果集 为空, 可能是update/del等语句，从 cx.total_changes 获取影响行数
 	if cnt == 1:
 		cnt = cu.rowcount
@@ -1273,7 +1310,7 @@ def SQliteDraw(sqlite_db, cmd):
 		sub_cnt += 1				# 当前子图序号
 		type, sql = i[1].upper(), i[2]
 		# 设置子图 (有子图,并且不存在 LS/BS 这类设置)
-		if n_sub > 1 and type.find('S') == -1:
+		if n_sub > 1 and type.find('S',1) == -1:
 			plt.subplot(sub_y,sub_x,sub_cnt)
 		# Connect SQLite
 		cx,cxt = dbconn(sqlite_db)
@@ -1305,13 +1342,14 @@ def SQliteDraw(sqlite_db, cmd):
 					print('!!!Data include < 0 item, Log Error.')
 				else:
 					odata = [math.log10(i) for i in odata]
-			# 绘制图形
-			plt.hist(odata,32)
+			# 绘制图形,显示标注
+			plt.hist(odata, 32, label=row_name[0])
+			plt.legend(prop={'size': 7})
 			if type == 'HL' or type == 'HY': plt.yscale('log')
 		# 小提琴分布图
 		elif type == 'V':
 			plt.violinplot([ float(i) for i in data[0] ],showmeans=True,showmedians=False,showextrema=True)
-		# 散点图
+		# 散点图 
 		elif type == 'S':
 			# 只提供一个参数，则自动构建 X 
 			if rcnt == 1:
@@ -1357,7 +1395,7 @@ def SQliteDraw(sqlite_db, cmd):
 				if type.find('L', 1) > 0 or type.find('X') > 0: plt.xscale('log')
 				if type.find('L', 1) > 0 or type.find('Y') > 0: plt.yscale('log')
 				# 如果属于需要处理标签的 (没有 b2 , 并且没有对 X 轴进行 log处理)
-				if type.find('2') < 0 and type.find('L', 1) < 0 and type.find('X') < 0:
+				if rcnt > 1 and type.find('2') < 0 and type.find('L', 1) < 0 and type.find('X') < 0:
 					# 计算 x 轴标签数量 (默认32个, 如果多子图或bs参数, 则相应缩减)
 					xlen = len(x)
 					if n_sub > 1:
@@ -1599,6 +1637,10 @@ def proc_cmd(cmd0):
 # Qsqlite 脚本文件执行函数
 #
 def Qexec(cmd):
+	'''
+	Execute Qsqlite Script
+		cmd: Qsqlite script 
+	'''
 	cmds = cmd.splitlines()  # split \n\r not only split('\n')
 	cblock = False			# 采用 ''' 块注释标记
 	try:
@@ -1619,8 +1661,16 @@ def Qexec(cmd):
 #
 # Qselect 执行查询语句, 返回行信息, 结果集
 #
-def Qselect(db, cmd):
-	return SQLiteQuery(db, cmd, 0)
+def Qselect(dbconn, cmd):
+	'''
+	Execute SQL command and return result.
+		dbconn: database connect, etc :memory: , my.db #mysql#
+		cmd: sql, etc: select * from abc limit 20
+	Return:
+		row_info: a list for row info, etc: ['date','name','age']
+		result:   result list, etc: [ ['2022-03-28','apple',12], ['2022-02-28','google',3] ]
+	'''
+	return SQLiteQuery(dbconn, cmd, 0)
 
 #
 # Main

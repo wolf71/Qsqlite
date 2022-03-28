@@ -14,25 +14,25 @@ loadcsv cn_city_l3_xy.csv c 1
 loadcsv cn_city_l2_xyp.csv c2 1
 
 # print table report 
-echo ## Chinese citys data report
+echo ## China citys data report
 select count(*), printf('%,d',sum(population*10000)) from c2 >[- cn_city_l2_xyp.csv include _@1_ Citys &nbsp;&nbsp; _@2_ population ]
 select sum(substr(ID,3,4)='0000'), sum(substr(ID,5,2)='00' and substr(ID,3,4)!='0000'), sum(substr(ID,5,2)!='00') from c >[- cn_city_l3_xy.csv include _@1_ provinces, _@2_ citys, _@3_ countys ]
 
-# simply draw chinese map
-echo ## Chinese Maps 
+# simply draw China map
+echo ## China Maps 
 draw s select lon, lat, 2 from c
 
 # using two tables data, draw combind maps
-echo ## Chinese City Maps ( red for citys，scale by population; blue for county)
+echo ## China City Maps ( red for citys，scale by population; blue for county)
 draw s select lon, lat, ifnull(n,1) n, case when n is null then '#1f77b4' else 'red' end from c left outer join (select id||substr('0000',1,6-length(id)) as id, population/10 as n from c2) as p on c.id = p.id
 
 # draw citys population line
-echo ## Chinese citys population
-draw l select population*10000 from c2 order by population*10000 desc
+echo ## China citys population
+draw b select population*10000 as population from c2 order by population*10000 desc
 
 # draw citys population histogram
-echo ## Chinese citys population histogram      (dobule logs)
-draw h select population * 10000.0 from c2; draw hl select population * 10000.0 from c2
+echo ## China citys population histogram
+draw h select population * 10000.0 as population from c2; draw hl select population * 10000.0 as 'population(XY-Log)' from c2
 
 chtml
 

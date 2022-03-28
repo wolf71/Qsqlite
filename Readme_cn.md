@@ -193,27 +193,28 @@
 8. 旧身份证转换为新的: **idconv(列/字串)** 将旧的15为身份证，自动转换为18为的（包括校验位计算）
 9. 幂运算操作: **power(2,3)** 表示计算2^3; 
   - power(2,0.5) 计算2的平方根; power(2,1.0/3) 计算2的立方根,注意用1.0，而非1
-10. 标准差计算: **std(2,3,4,5)** 用在数据库统计中，例如 select std(mM) from T1 ；计算一组数据的 标准差;
-11. 列表索引选择: **slist('1,2,3,4,5',2)** 返回3，即将字符串用 , 分割, 而后选择第2个元素（0开头）
+10. 标准差计算: **std(2,3,4,5)** 用在数据库统计中，例如 select std(mM) from T1 计算一组数据的 标准差;
+11. 中位数计算: **median(2,3,4,5)** 用在数据库统计中，例如 select median(mM) from T1 计算一组数据的 中位数;
+12. 列表索引选择: **slist('1,2,3,4,5',2)** 返回3，即将字符串用 , 分割, 而后选择第2个元素（0开头）
   - 如索引超过, 则返回最后一个元素; 可以用负值, 例如: slist('1,2,3,4,5',-2) 返回 4; 同样，超过范围，返回最前一个值；也可以 slist('apple,ibm',1)
-12. 返回拼接字符串首 N 项: **ctop('string', 'split char', n)** 
+13. 返回拼接字符串首 N 项: **ctop('string', 'split char', n)** 
 	- ctop('1 2 3 4 5', ' ', 2) 将返回 '1 2';  ctop('1,2,3,4,5', ',', 3) 将返回 '1,2,3'
   - 当用 csum 将结果集聚合成一个字符串，若希望获取TopN项, 则可用这个功能，例如: ctop(csum(name||count(*)),' ',10), 这样就可实现对每个group by 数据, 只选取前面10个
-13. 返回找到正则的数量: **regfn(',','1,2,3,4,5,6')** 返回5，表示找到5个逗号
-14. N行移动平均值计算: **navg(列名, n)** 
+14. 返回找到正则的数量: **regfn(',','1,2,3,4,5,6')** 返回5，表示找到5个逗号
+15. N行移动平均值计算: **navg(列名, n)** 
 	- 假设一个 stock 股价表, 按 日期 存储每个股票的价格信息, 结构为: ID text, date text, open integer, close integer
 	- 希望计算 open 开盘价格的 7 天移动平均线, 普通的 SQL 语句很难一次实现, 而该函数就是提供此类支持
 		- draw l select date, open, navg(open, 7) from stock where ID='Apple' 
 		- 以上语句绘制 open 价格曲线, 并叠加7日移动平均线;
 	- **限制条件**: 因为该扩展函数使用了全局变量，因此在一次查询中，只能使用一个 navg 语句, 如果使用多个, 则会导致数据错误;
-15. 行间差值计算: **rdelta(列名)**
+16. 行间差值计算: **rdelta(列名)**
 	- 假设一个 covid19 表, 按 日期 存储每个国家/城市的确诊人数信息，结构为: CID text, date text, confirmed text
 	- 希望计算每日新增确诊用户数, 因为数据里面存储的是累计的确诊人数, 因此实际上需要计算两行之间的差值, 用 SQL 语句可以借助 rowid 实现 (例如: select )
 		- select date, rdelta(confirmed+0) as d_confirmed from covid19 where CID='US'
 		- 为什么是 confirmed+0? 因为 confirmed 是字符类型, 通过这种方式将其转换为 数字类型
 		- 以上语句计算出 每日新增确诊 人数数据; 第一行因为数据无法计算，因此填入 null 值
 	- **限制条件**: 因为该扩展函数使用了全局变量，因此在一次查询中，只能使用一个 rdelta 语句, 如果使用多个, 则会导致数据错误;
-16. 行间字符串差异计数器 **cindex(列名)**
+17. 行间字符串差异计数器 **cindex(列名)**
 	- 假设一个 book 图书表, 按照类别记录书本信息, 表结构: ID text, type text, name text, 内容如下:
 	```
 	001 G01 book1
@@ -451,7 +452,7 @@
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
-- 2022/3/27    V0.92 Add draw bar function and add Qselect function.
+- 2022/3/27    V0.92 Add draw bar function, SQLite median, Qselect function.
 
 ## sqlite 参考资料
 - SQlite3 Doc

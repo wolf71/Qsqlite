@@ -193,27 +193,28 @@
 8. Chinese old ID card conversion to new: **idconv(column/string)** will be the old 15 for the ID card, automatically converted to 18 for the (including check digit calculation)
 9. power operation: **power(2,3)** means calculate 2^3; 
   - power(2,0.5) calculates the square root of 2; power(2,1.0/3) calculates the cube root of 2, note that the use of 1.0, not 1
-10. standard deviation calculation: **std(2,3,4,5)** Used in database statistics, e.g. select std(mM) from T1; calculate the standard deviation of a set of data;
-11. list index selection: **slist('1,2,3,4,5',2)** return 3, that is, the string will split by ',' and then select the second element (starting with 0)
+10. standard deviation calculation: **std(2,3,4,5)** Used in database statistics, e.g. select std(mM) from T1 calculate the standard deviation of a set of data;
+11. Median calculation: **median(2,3,4,5)** Used in database statistics, e.g. select median(mM) from T1 to calculate the median of a set of data;
+12. list index selection: **slist('1,2,3,4,5',2)** return 3, that is, the string will split by ',' and then select the second element (starting with 0)
   - If the index exceeds, then return the last element; can use negative values, for example: slist('1,2,3,4,5',-2) return 4; similarly, beyond the range, return the first value; can also slist('apple,ibm',1)
-12. return the first N items of the spliced string: **ctop('string', 'split char', n)**
+13. return the first N items of the spliced string: **ctop('string', 'split char', n)**
 	- ctop('1 2 3 4 5', ' ', 2) return '1 2';  ctop('1,2,3,4,5', ',', 3) return '1,2,3'
   - When using csum to combine the result set into a string, if you want to get the topN items, you can use this function, for example: ctop(csum(name||count(*)),' ',10), so that for each group by data, only the first 10 are selected
-13. return the number of regulars found: **regfn(',','1,2,3,4,5,6')** returns 5, meaning 5 commas were found
-14. N row moving average calculation: **navg(column name, n)** 
+14. return the number of regulars found: **regfn(',','1,2,3,4,5,6')** returns 5, meaning 5 commas were found
+15. N row moving average calculation: **navg(column name, n)** 
 	- Suppose a stock price table, storing the price information of each stock by date, structure: ID text, date text, open integer, close integer
 	- If you want to calculate the 7-day moving average of the open price, it is difficult to do it at once with SQL statements, but this function provides such support
 		- draw l select date, open, navg(open, 7) from stock where ID='Apple' 
 		- The above statement draws the open price curve, and overlays the 7-day moving average;
 	- **Restrictions**: Because this extension uses global variables, only one navg statement can be used in a query, if more than one is used, it will result in data errors;
-15. inter-row difference calculation: **rdelta(column name)**
+16. inter-row difference calculation: **rdelta(column name)**
 	- Suppose a covid19 table, storing the number of confirmed in each country by date, with the following structure: CID text, date text, confirmed text
 	- You want to calculate the new confirmed per day, because the table include total confirmed , so you actually need to calculate the difference between two rows. this function provides such support
 		- select date, rdelta( confirmed+0 ) as d_confirmed from covid19 where CID='US'
 		- Why using confirmed+0? because confirmed is text type, using this method conver to integer.
 		- The above statement calculates the number of new confirmed per day; the first row is filled with a null value because the data cannot be calculated.
 	- **Restrictions**: Because this extension uses global variables, only one rdelta statement can be used in a single query, if more than one is used, the data will be incorrect;
-16. inter-row string difference counter **cindex(column name)**
+17. inter-row string difference counter **cindex(column name)**
 	- Suppose a book book table, record book information by type, table structure: ID text, type text, name text, content as follows:
 	```
 	001 G01 book1
@@ -454,7 +455,7 @@
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
-- 2022/3/27    V0.92 Add draw bar function and add Qselect function.
+- 2022/3/27    V0.92 Add draw bar function, SQLite median, Qselect function.
 
 ## sqlite references
 - SQlite3 Doc
