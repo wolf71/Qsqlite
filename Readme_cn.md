@@ -452,7 +452,7 @@
 - 2022/03/08   V0.89 BugFix and add ls cmd and optimize loadcsv/>csv function.
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
-- 2022/3/27    V0.92 Add draw bar function, SQLite median, Qselect function.
+- 2022/03/27   V0.93 Add draw bar function, SQLite median, Qselect function.
 
 ## sqlite 参考资料
 - SQlite3 Doc

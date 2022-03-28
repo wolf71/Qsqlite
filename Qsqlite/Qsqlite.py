@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.92
+__version__ = 0.93
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.92) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.93) ======
 # command
  @ q - quit   h/? - help    @ #/- comment; three ' for block comment
  @ l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd
@@ -85,9 +85,7 @@ help_str = '''
  - VACUUM : optimize the database file (small size)
 '''
 
-from logging import raiseExceptions
 import os, sys, math, re, time, base64, csv
-from signal import raise_signal
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, unquote
