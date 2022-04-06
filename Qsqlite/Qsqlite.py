@@ -4,13 +4,15 @@
            By: Charles Lai
 '''
 
-__version__ = 0.93
+__version__ = 0.95
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.93) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.95) ======
 # command
- @ q - quit   h/? - help    @ #/- comment; three ' for block comment
+ @ q - quit   
+ @ ?/h - help    or  ? querystr    etc: ? draw
+ @ #/-  comment;  three ' for block comment
  @ l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd
  @ ls - List current dir files; ls *.csv or ls city 
  @ echo - Display information
@@ -24,7 +26,7 @@ help_str = '''
  - etc: copy new.db tb01 select * from tb00 where age < 100 limit 10
  - !same db,can using: insert into tb01 select a,b,c from tb00 where a<10
  @ dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
- @ loadcsv - load csv file and copy to new table
+ @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf / .vcf file)
  - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (csv line 1 as title)
  @ >csv file.csv 1/0  export select result to csv file (0/1 - with/without rowinfo)
  @ loadjson - load json file and copy to new table
@@ -50,22 +52,22 @@ help_str = '''
  - select * from tab >csv filename.csv 0/1 (export csv file with/without rowinfo)
  
  # ext function for SQLite:
- @ regexp('^[1]([3-9])[0-9]{9}$',mobil)
- @ regfind('1(.*?)2','1hello2 1good2',1) -> hello
- @ regfn(',','1,2,3,4,5,6') -> 5 (5 match re)
- @ regsub('([\d]{3})','#\\1#','Test000-372')  -> Test#000#-#372#
- @ destr('123,456,34,456,1',',') -> '123,456,34,1'
- @ select mID,csum(mName),count(*) from T group by mID
- @ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
- @ std function; select std(mM) from T    or  select std(1,2,3,4,5)
- # median function; select median(mM) from t or select median(1,3,2,5,4)
- @ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
- @ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
- @ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
- @ ctop('1 2 3 4 5',' ',3) -> 1 2 3  (ctop(x,y,z) split string x using y,and return top z item)
- @ cindex(col) select uid, cindex(pid) as cnt, a from T group by uid where cnt<3*2
- @ navg(row,n)  N row moving average calculation
- @ rdelta(column name)  inter-row difference calculation
+ @@ regexp('^[1]([3-9])[0-9]{9}$',mobil)
+ @@ regfind('1(.*?)2','1hello2 1good2',1) -> hello
+ @@ regfn(',','1,2,3,4,5,6') -> 5 (5 match re)
+ @@ regsub('([\d]{3})','#\\1#','Test000-372')  -> Test#000#-#372#
+ @@ destr('123,456,34,456,1',',') -> '123,456,34,1'
+ @@ select mID,csum(mName),count(*) from T group by mID
+ @@ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
+ @@ std function; select std(mM) from T    or  select std(1,2,3,4,5)
+ @@ median function; select median(mM) from t or select median(1,3,2,5,4)
+ @@ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
+ @@ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
+ @@ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
+ @@ ctop('1 2 3 4 5',' ',3) -> 1 2 3  (ctop(x,y,z) split string x using y,and return top z item)
+ @@ cindex(col) select uid, cindex(pid) as cnt, a from T group by uid where cnt<3*2
+ @@ navg(row,n)  N row moving average calculation
+ @@ rdelta(column name)  inter-row difference calculation
  
  # Sqlite Tips:
  - select distinct * from Table order by random() limit 2 offset 1000 (or limit s,n ==> limit n offset s)
@@ -82,7 +84,7 @@ help_str = '''
  - select rowid, * from c (select system rowid); select last_insert_rowid()
  - SQlite system function: count, max, min, avg, sum, substr, random, abs, upper, lower, length, trim, ltrim, rtrim, replace('apple','app','*'), typeof, hex, like('%12%',name) or like('23_33',tel) or like('100\%F%', name, '\'), iif(c,x,y), coalesce(t1,t2,t3...), hex(randomblob(16)), printf('%08d is %.2fs on %-10s %,d', 34123, 3123.334, 'apple',12345) ... 
  - Explain to see the SQLite execution policy: explain select ID from Room where m > 15
- - VACUUM : optimize the database file (small size)
+ - VACUUM : optimize the database file (small size) / pragma table_info(tb1)  will list all tb1 col info.
 '''
 
 import os, sys, math, re, time, base64, csv
@@ -802,11 +804,26 @@ def dbconn(dbname):
 
 #
 # load csv file to new table
-#		参数：数据库、csv文件名、表名、是否第一行过滤掉(1表示过滤掉)
+#		参数：数据库, csv文件名, 表名, 是否第一行过滤掉(1表示过滤掉), 是否 tsv 格式(\t分割的csv)
 #
-def loadCSV(dbname,fname,tname,ftype):
+def loadCSV(dbname, fname, tname, ftype, tsv=0):
 	# 默认用 utf-8 打开文件，如果出错，则改用默认方式
 	wt = 2				# 默认尝试2次，一次用UTF-8解码，一次GBK
+	# 根据文件名, 判断 CSV or TSV
+	# 对于 .maf / .vcf 文件，需要跳过前面部分(p_ext) #/## 的注释
+	l_ext = fname.strip()[-4:].upper()
+	if l_ext == '.TSV':
+		tsv = 1
+		p_ext, p_n = '', 0
+	elif l_ext == '.MAF':
+		ftype, tsv = 1, 1
+		p_ext, p_n = '#', 1
+	elif l_ext == '.VCF':
+		ftype, tsv = 1, 1
+		p_ext, p_n = '##', 2
+	else:
+		p_ext, p_n = '', 0
+	# 读取文件, 检查是否符合要求
 	while wt > 0:
 		wt -= 1
 		try:
@@ -814,12 +831,24 @@ def loadCSV(dbname,fname,tname,ftype):
 				f = open(fname, 'r', encoding='utf-8-sig', newline='')	#utf-8-sig也能解析utf-8内容
 			else:		# 否则改用 GBK
 				f = open(fname, 'r', encoding='GBK', newline='')
-			# 读取文件
-			info = []
-			cnt, err = 0, 0
-			r = csv.reader(f) #, delimiter=' ', quotechar='|')
+			# 读取文件 (cnt - 列数, rsize - 行数, skip_r - 跳过前面 行数, i_note: maf/vcf 文件注释 )
+			cnt, err, rsize, skip_r = 0, 0, 0, 0
+			i_note = []
+			# 如果是 TSV 格式, 按照 \t 分割
+			if tsv:
+				r = csv.reader(f, delimiter='\t')
+			else:
+				r = csv.reader(f) #, delimiter=' ', quotechar='|')
 			for t in r:
-				# check csv row cnt 
+				# 对于 maf/vcf 文件, 需要检测前部注释,并且跳过
+				if p_n:
+					if t[0][:p_n] == p_ext:
+						i_note.append(t[0])
+						skip_r += 1
+						continue
+				# 累加有效行计数器
+				rsize += 1
+				# check csv row cnt
 				if cnt > 0:
 					if cnt != len(t):
 						print( '# CSV Problem (split item not %d): %s'%(cnt, t) )
@@ -827,7 +856,11 @@ def loadCSV(dbname,fname,tname,ftype):
 						break
 				else:
 					cnt = len(t)
-				info.append(t)
+					# 如果第一行为表头, 则在这里进行获取
+					if ftype == 1:
+						info = t
+						# 对于 vcf 文件, 需要过滤掉表头前的 # 符号 (#name	code)
+						if p_ext == '##': info[0] = info[0][1:]
 			# 读取完成，表示不需要再尝试，直接退出
 			break
 		except UnicodeDecodeError:
@@ -837,13 +870,19 @@ def loadCSV(dbname,fname,tname,ftype):
 			err = 2
 			break 
 	# 将 csv 数据插入
-	if err == 0 and info:
+	if err == 0 and rsize > 0:
+		# 如果第一行是表头, 则 记录数-1 
+		if ftype == 1: rsize -= 1
+		# 对于 maf/vcf 类型文件, 显示注释信息
+		if i_note: print('\n'.join(i_note))
+		# 显示检查结果
+		print('@ %s check ok, total %d records, write to [ %s ]...'%(fname, rsize, tname))
 		# Connect SQLite
 		cx, cxt = dbconn(dbname)
 		cu = cx.cursor()
 		# 如果 CSV 第一行 为标题，则使用其作为 表字段, 否则使用 r1/r2... 顺序名
 		if ftype == 1:
-			row  = ','.join([info[0][i]+' text' for i in range(cnt)])
+			row  = ','.join(['"'+info[i]+'" text' for i in range(cnt)])
 		else:
 			row  = ','.join(['r'+str(i+1)+' text' for i in range(cnt)])
 		# 针对 SQLite/MySQL 不同构建插入语句
@@ -853,15 +892,19 @@ def loadCSV(dbname,fname,tname,ftype):
 			rcnt = ','.join(['?' for i in range(cnt)])
 		# create new table
 		cu.execute('create table if not exists %s (%s);'%(tname,row))
-		# 批量将 列表 内的元素插入
-		if ftype == 1:
-			cu.executemany('insert into %s values (%s)'%(tname,rcnt), info[1:])
-			rsize = len(info) - 1
-			print('CSV Title: ',info[0])
-		else:
-			cu.executemany('insert into %s values (%s)'%(tname,rcnt), info)
-			rsize = len(info)
+		# 文件指针回到开头位置
+		f.seek(0, 0)
+		# 如果第一行是表头, 则递增 跳过计数器
+		if ftype == 1: skip_r += 1
+		# 跳过 头部 注释记录
+		while skip_r:
+			next(r)
+			skip_r -= 1
+		# 批量写入数据
+		cu.executemany('insert into %s values (%s)'%(tname, rcnt), r)
+		# 最后完成 commit, 关闭文件
 		cx.commit()
+		f.close()
 		print('Load csv %d Records to table %s'%(rsize, tname))
 		if cxt: cx.close()		# 如非内存连接，则关闭
 	else:
@@ -1286,6 +1329,19 @@ def SQliteDraw(sqlite_db, cmd):
 	# 获取数据、绘制图形
 	try:
 		import matplotlib.pyplot as plt
+		import locale
+		# 只有中文环境才进行 PIL 字体设置
+		if locale.getdefaultlocale()[0] == 'zh_CN':
+			# Matplotlib 中文字体 设置
+			if sys.platform == 'darwin':
+				# Mac 系统配置
+				plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+				# 确保负号正常显示
+				plt.rcParams['axes.unicode_minus']=False
+			elif sys.platform == 'win32':
+				plt.rcParams['font.sans-serif']=['SimHei']
+				# 确保负号正常显示
+				plt.rcParams['axes.unicode_minus']=False
 	except ModuleNotFoundError:
 		print('# Please install matplotlib, using: pip3 install matplotlib')
 		return -1
@@ -1430,8 +1486,16 @@ def proc_cmd(cmd0):
 			# 将 loop / lend 循环体内的指令保存起来
 			loop_cmd[-1].append(cmd0)
 			return 0
-		if cmd == 'H' or cmd == '?':
-			print(help_str)
+		# 解析具体指令
+		if re.findall('^(?:H|\?)($| .+)',cmd):
+			help_q = cmd0[1:].strip()
+			# 如果 后面有关键字，则进行过滤
+			if help_q:
+				for i in help_str.split('\n'):
+					if help_q.lower() in i.lower():
+						print(i)
+			else:
+				print(help_str)
 		elif cmd[:4] == 'OPEN':
 			db = cmd0[5:]
 			my = re.findall('#(.+?)#',db)
@@ -1680,7 +1744,7 @@ def main():
 		cmd_file = sys.argv[1]
 		try:
 			# 读取脚本文件内容，而后调用脚本解析函数
-			f = open(cmd_file, 'r',encoding='utf-8')
+			f = open(cmd_file, 'r', encoding='utf-8')
 			cmd = f.read()
 			f.close()
 			#
@@ -1720,7 +1784,7 @@ def main():
 			print('!!! Script File not found.')
 	# 交互命令行操作
 	else:
-		print('> Quick SQLite Cmd/Script Tools V%s (h - Help, q - Quit)'%__version__)
+		print('> Quick SQLite Cmd/Script Tools V%s (?/h - Help, q - Quit)'%__version__)
 		while True:
 			try:
 				cmd0 = input('> ').strip()

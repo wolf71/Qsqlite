@@ -101,6 +101,8 @@
 		- using: **loadcsv filecsv tab01 1**
 		- Set the table information based on the csv table header information, for example
 			- tab01 ( "ID" text, "Name" text, "Tele" text )
+	- loadcsv also support **tsv format** file (\t split type), just using: loadcsv test.tsv tb1 1
+	- loadcsv also support **bioinformatics .maf / .vcf file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
 - 2.2 Exporting csv
   - Use **>csv csv file name 0/1** (The parameter 0/1 indicates whether to export the table header information. 0-no export, 1-export)
   - Example: select * from table1 where n=300 >csv user1.csv 1 , export the contents of a table to user1.csv file by select and export the table header information (the first line of the exported csv file is the database table header information)
@@ -456,6 +458,7 @@
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 - 2022/03/27   V0.93 Add draw bar function, SQLite median, Qselect function.
+- 2022/04/02   V0.93 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
 
 ## sqlite references
 - SQlite3 Doc

@@ -99,6 +99,8 @@
 		- 使用: **loadcsv filecsv tab01 1**
 		- 将会自动根据csv表头信息来构建 数据库表 的信息，而后插入数据，例如:
 			- tab01 ( "ID" text, "Name" text, "Tele" text )
+	- loadcsv 也支持 **tsv 格式**文件 (用 \t 分割的类型), 使用: loadcsv test.tsv tb1 1 加载即可.
+	- loadcsv 也支持 **生物信息学 .maf / .vcf file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
 - 2.2 导出 csv
   - 使用 **>csv csv文件名 0/1** (后面的参数0/1 表示是否导出表头信息. 0-不导出, 1-导出)
   - 例如: select * from table1 where n=300 >csv user1.csv 1 , 通过 select 将 某个表的内容导出到 user1.csv 文件，并且导出表头信息(导出的csv文件第一行是数据库表头信息)
@@ -453,6 +455,7 @@
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 - 2022/03/27   V0.93 Add draw bar function, SQLite median, Qselect function.
+- 2022/04/02   V0.93 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
 
 ## sqlite 参考资料
 - SQlite3 Doc
