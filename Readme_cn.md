@@ -72,6 +72,8 @@
   - **l** 列出最近使用的 12 条操作指令
     - **la** 列出所有使用过的操作指令
     - **l0** 执行最后一个操作指令, 也可以用对应序号来执行以前的操作指令, 例如: l3, l22
+		- **l> file** 将历史查询保存到文件.
+		- **l< file** 从文件加载查询指令.
 - 1.4 数据库复制操作
   - **copy db tableDest select * from tabSource**
     - 用于在多个数据库之间进行 表数据复制, 例如将当前数据库中的 tabSource表的内容，复制到 db 数据库的 tableDest 表中去；
@@ -90,9 +92,11 @@
     - 默认 select 查询结果会自动列出, 不需特殊处理, 除非你希望格式化输出, 则可以在语句后用 >[] 来调整
     - 例如 select * from table >[- ID: _@1_, Name: _@2_(_@3_), Age: _@4_]
     - 在这里 _@1_ 表示 select 语句 返回的第一列, _@2_ 表示第二列，依次类推; 如希望显示顺序号(从1开始，自动递增), 可用 _@0_ 表示, 例如: select * from table limit 10 >[ _@0_ ID: _@1_, Name: _@2_]
+- 1.6 执行脚本文件
+	- **exec file** 将执行 file 脚本文件, 例如: exec qTest.txt 可以执行 qTest.txt 脚本文件内容
 
 ### 2. 加载或导出 csv 和 加载 JSON 功能
-- 2.1 加载 csv , 使用: **loadcsv file.csv tab01**
+- 2.1 加载 csv/tsv , 使用: **loadcsv file.csv tab01**
 	- 加载 file.csv 文件, 自动根据 csv 文件栏目创建 tab01 表，而后将 csv 文件内容插入到表中.
 		- tab01 ( "r1" text, "r2" text, "r3" text )
 	- 如果 csv 文件包含表头信 (一般在文件第一行)，则可设置参数(最后加上参数 1 )，以便正确识别.
@@ -100,7 +104,7 @@
 		- 将会自动根据csv表头信息来构建 数据库表 的信息，而后插入数据，例如:
 			- tab01 ( "ID" text, "Name" text, "Tele" text )
 	- loadcsv 也支持 **tsv 格式**文件 (用 \t 分割的类型), 使用: loadcsv test.tsv tb1 1 加载即可.
-	- loadcsv 也支持 **生物信息学 .maf / .vcf file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
+	- loadcsv 也支持 **生物信息学 .maf/.vcf/.sam/.gtf/.gff/.gpd file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
 - 2.2 导出 csv
   - 使用 **>csv csv文件名 0/1** (后面的参数0/1 表示是否导出表头信息. 0-不导出, 1-导出)
   - 例如: select * from table1 where n=300 >csv user1.csv 1 , 通过 select 将 某个表的内容导出到 user1.csv 文件，并且导出表头信息(导出的csv文件第一行是数据库表头信息)
@@ -113,7 +117,6 @@
 		- 将读取 t1.json 文件, 根据JSON内容，创建 corp 表
 			- corp ( "Corp" text, "ID" integer )
 		- 而后读取 JSON 文件内容，插入 corp 表
-
 - 2.4 复杂 JSON 数据, 例如: JSON 文件 t2.json 内容如下:
 ```json
 {"Result":0, "Return":[{"Corp": "Apple", "ID": 123, "Product":[{"ID":1,"Name":"iPhone"}, {"ID":2,"Name":"iPad"}, {"ID":3,"Name":"Mac"}], "Profit":[{"Type":"Profit1","P":3456789}]}, {"Corp": "Microsoft", "ID": 456, "Product":[{"ID":11,"Name":"Windows"}, {"ID":12,"Name":"Office"}]}, {"Corp": "IBM", "ID": 789, "Product":[{"ID":21, "Name":"MainFrame"}], "Profit":[{"Type":"Profit1","P":1234567}, {"Type":"Profit2","P":336699}] }], "Ref":1234567}	
@@ -126,6 +129,20 @@
     - ncorp_Profit ( "t_ID" text, "Type" text, "P" integer )
     - 为什么是 3 个表? 因为 Qsqlite 发现 JSON 数据里面包含了 子列表 (Product 和 Profit), 所以自动创建两个对应子表，并且通过 在 ncorp 自动增加 Product, Profit 字段关联 2 个子表.
   - 注意: 当前只支持第一层级的 子表 创建，不会递归到下面层级
+- 2.5 加载 生物信息学 GeneBank 格式的 Features 注释信息 到数据库表
+	- 使用: **loadgb gbfile tb01**
+		- 将会读取 genebank 格式的数据文件(例如: .gb/.gbff/.gpff), 解析出里面的 Features 注释信息, 写入数据库表
+		- 一个文件，会导入**三个表**, 表结构
+			- (01) tb01 (输入的表名)
+				- locus text, type text, gene text, start integer, end integer,location text, product text, protein_id text, note text
+			- (02) tb01_def (输入表名后加入 _def, 对应每一个 LOCUS 的定义内容)
+				- locus text, locusinfo text, reference text, accession text, version text, dblink text, keywords text, source text, organism text, comment text
+			- (03) tb01_ref (输入表名后加入 _ref, 对应每一个 LOCUS 的 REFERENCE 描述的所有内容)
+				- locus text, reference text, title text, authors text, journal text, pubmed text, remark text
+		- 一个 genebank 文件中, 可能包含多个 Features 块内容, 可以通过 locus 来区分;
+		- start, end 内容只对 (123..345) 这种确定起点,结束点的位置进行解析, 对于 join / complement 这类复杂地址, 则填入 0, 0 , 具体内容放在 location 字段；
+		- note 字段是一个复合字段, 将 Features 里面的其它各项内容聚合在这里, 使用 item1=value1;item2=value2 ... 模式表达
+		- Features 的 translation 内容, 文件的 序列信息 ORIGIN 都会被 忽略
 
 ### 3. 绘制图表功能 (折线图、分布图、箱型图、散点图)
 - 3.1 **draw s** 绘制散点图
@@ -455,7 +472,8 @@
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 - 2022/03/27   V0.93 Add draw bar function, SQLite median, Qselect function.
-- 2022/04/02   V0.93 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
+- 2022/04/02   V0.95 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
+- 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 
 ## sqlite 参考资料
 - SQlite3 Doc

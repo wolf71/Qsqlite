@@ -74,6 +74,8 @@
   - **l** List the 12 most recently used operation commands
     - **la** Lists all history commands
     - **l0** execute the last operation instruction, you can also use the corresponding serial number to execute the previous operation instructions, for example: l3, l22
+		- **l> file** Save history to file.
+		- **l< file** Load history from file.
 - 1.4 Database copy operation
   - **copy db tableDest select * from tabSource**
     - is used to copy table data between multiple databases, for example, to copy the contents of the tabSource table in the current database to the tableDest table in the other database.
@@ -92,9 +94,11 @@
     - The default select query results are listed automatically without special handling, unless you want to format the output, which can be adjusted with >[ ] after the statement
     - For example select * from table >[- ID: _@1_, Name: _@2_(_@3_), Age: _@4_]
     - Here _@1_ is the first column returned by the select statement, _@2_ is the second column, and so on; if you want to display the order number (starting from 1 and increasing automatically), you can use _@0_, for example: select * from table limit 10 >[ _@0_ ID: _@1_, Name: _@2_]
+- 1.6 Execute Script
+	- **exec file** Execute file script, etc: exec qTest.txt will execute qTest.txt script.
 
 ### 2 load and export csv file and load JSON file
-- 2.1 Load csv file using: **loadcsv file.csv tab01**
+- 2.1 Load csv/tsv file using: **loadcsv file.csv tab01**
 	- Load the file.csv file, create the table tab01 automatically according to the csv column, and insert the data.
 		- tab01 ( "r1" text, "r2" text, "r3" text )
 	- If the csv file contains table header information (the first line of the csv file), the parameter 1 can be added at the end for correct identification.
@@ -102,7 +106,7 @@
 		- Set the table information based on the csv table header information, for example
 			- tab01 ( "ID" text, "Name" text, "Tele" text )
 	- loadcsv also support **tsv format** file (\t split type), just using: loadcsv test.tsv tb1 1
-	- loadcsv also support **bioinformatics .maf / .vcf file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
+	- loadcsv also support **bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
 - 2.2 Exporting csv
   - Use **>csv csv file name 0/1** (The parameter 0/1 indicates whether to export the table header information. 0-no export, 1-export)
   - Example: select * from table1 where n=300 >csv user1.csv 1 , export the contents of a table to user1.csv file by select and export the table header information (the first line of the exported csv file is the database table header information)
@@ -126,6 +130,20 @@
       - ncorp_Profit ( "t_ID" text, "Type" text, "P" integer )
       - why 3 tables? because Qsqlite found json data include a sub-list call Product and Profit, so auto create other 2 sub-tables.
     - Note: Currently only the first level of sub-table creation is supported, it will not be recursive to the following levels.
+- 2.5 Load Bioinformatics GeneBank Format Features Data.
+	- using: **loadgb gbfile tb01**
+		- load bioinformatics genebank file (etc: .gb/.gbff/.gpff) features info to table.
+		- A file that will import to **three tables**, table structure
+			- (01) tb01 (input table name)
+				- locus text, type text, gene text, start integer, end integer,location text, product text, protein_id text, note text
+			- (02) tb01_def (table name add _def, corresponding to the definition of each LOCUS)
+				- locus text, locusinfo text, reference text, accession text, version text, dblink text, keywords text, source text, organism text, comment text			
+			- (03) tb01_ref (table name add _ref, corresponding to all the contents of each LOCUS' REFERENCE description)
+				- locus text, reference text, title text, authors text, journal text, pubmed text, remark text
+		- A genebank file may contain more than one Features block, which can be distinguished by locus;
+		- start, end content only for (123..345) Simple location, for join/complement such complex location, fill in 0, 0, real content in the location field.
+		- The note field is a compound field that aggregates all other contents of Features here, using item1=value1;item2=value2 ... Schema expression.
+		- The translation content of Features, the file's sequence information ORIGIN are ignored.
 
 ### 3. Draw functions (line, histogram, Violin box, scatter)
 - 3.1 **draw s** Scatter plot
@@ -458,7 +476,8 @@
 - 2022/03/13   V0.9  BugFix and add some demo.
 - 2022/03/14   V0.91 Add navg, rdelta sqlite ext-function and rewrite help.
 - 2022/03/27   V0.93 Add draw bar function, SQLite median, Qselect function.
-- 2022/04/02   V0.93 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
+- 2022/04/02   V0.95 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
+- 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 
 ## sqlite references
 - SQlite3 Doc
