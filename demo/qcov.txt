@@ -1,0 +1,139 @@
+#
+# Qsqlite Example of Covid-19 Confirmation and Death Data Acquisition and Analysis
+# Qsqlite 新冠病毒确诊与死亡数据获取与分析范例 
+#
+
+#
+# From GitHub download Hopkins University dataset (two csv file)
+# 从 网络下载 霍普金斯大学 数据 csv 文件
+# 1. global confirmed data 全球每日确诊累计人数
+#
+download https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv covid.csv
+# 2. global deaths 全球每日死亡累计人数
+download https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv covid_d.csv
+
+
+#
+# Open Memory Database and load csv data
+# 使用内存数据库, 加载 csv 文件
+#
+open :memory:
+loadcsv covid.csv c 1
+loadcsv covid_d.csv d 1
+
+# 
+# Transpose a horizontal table to a vertical table
+#  将横向的表，转置为纵向表 
+# csv dataset: csv 格式为 
+#    Province/State, Country/Region, Lat, Long, day1, day2, day3, ....
+# transpose to: 转换为
+#    province, country, day1, confirmed, deaths
+#    province, country, day1, confirmed, deaths
+
+#
+# Create a table t, arrange the data vertically, and merge the confirmed and deaths into one table
+# 创建新表, 将数据纵向排列, 并合并 确诊,死亡 数据到一个表
+#
+create table t(p text, c text, d text, v integer, k integer)
+
+# 
+# Iterate each date column ( [4:] indicating the column starting from the first date, The first 4 fields are province/country/latitude/longitude)
+# 循环遍历每一个日期列 ([4:] 表示从第一个日期开始的列, 前 4 个字段为省市/国家/经纬度)
+#
+loop [i for i in getTableCols('c')[4:]]
+ # using SQLite printf and Qsqlite ext-function regfind converted day string to the SQLite date format.
+ # 插入的时候，将日期字符转换为 SQLite 支持的形式，便于排序、计算等操作
+ insert into t select c."Province/State", c."Country/Region", printf( '20%d-%02d-%02d', regfind('(\d+?)(?:/|$)','_^2_',3), regfind('(\d+?)(?:/|$)','_^2_',1), regfind('(\d+?)(?:/|$)','_^2_',2) ), c."_^2_", d."_^2_" from c, d where c."Province/State" = d."Province/State" and c."Country/Region" = d."Country/Region"
+lend
+
+
+#
+# Using two tables to Calculate the daily additions (due to the nature of the rdelta function, it is not possible to use the rdelta function more than once in a single query)
+# 计算日新增数据, 分别放置到两个表 (因 rdelta 函数的特性, 无法在一个查询语句使用 超过一次 rdelta 函数)
+#
+create table v1(c text, d text, k integer, da integer)
+create table v2(c text, d text, k integer, da integer)
+
+#
+# Iterate each country, calculate daily additions 按国家进行循环, 计算日新增
+#
+loop select c from t group by c
+ insert into v1 select c, d, v, rdelta(v) from (select c, d, sum(v) as v from t where c="_^1_" group by d order by d)
+ insert into v2 select c, d, v, rdelta(v) from (select c, d, sum(k) as v from t where c="_^1_" group by d order by d)
+lend
+
+#
+# Replace Null data with 0
+# 将无效的 Null 数据替换成 0 （如 删除无效数据，则会导致后续横向转换失败)
+#
+update v1 set da = 0 where da is Null
+update v2 set da = 0 where da is Null
+
+#
+# Merge all data to one table
+# 将所有数据合并到一张表
+#
+create table cov (c text, d text, v integer, dv integer, k integer, dk integer)
+insert into cov select v1.c, v1.d, v1.k, v1.da, v2.k, v2.da from v1, v2 where v1.c = v2.c and v1.d = v2.d order by v1.c, v1.d 
+
+
+#
+# Drop Unwanted tables
+# 删除不需要的表
+#
+drop table c
+drop table d
+drop table v1
+drop table v2
+
+
+#
+# Now you can easily use the cov table on Qsqlite to statistics/analyze data, draw image, export to csv or database.
+# 现在你可以方便的使用 cov 这个表, 在 Qsqlite 中进行分析/统计数据, 绘制图标, 输出文件到 csv 或 数据库
+# 
+
+
+#
+# Draw / 绘制数据
+#
+draw b select d, dv as cn from cov where c='China'; draw b select d, dv as us from cov where c='US'
+draw l select cn.d, cn.dk as cn, jp.dk as jp from (select d, dk from cov where c='China') as cn inner join (select d, dk from cov where c='Japan') as jp on cn.d = jp.d
+draw hl select max(v) as log_total_confirm from cov group by c having max(v)>0; draw hl select max(k) as log_total_death from cov group by c having max(k)>0
+draw l select d, sum(dv) as global_confirm from cov group by d; draw l select d, sum(dk) as global_death from cov group by d
+
+
+'''
+
+#
+# export to csv file / 导出数据到 csv 文件
+#
+select * from cov >csv cov19.csv
+
+
+#
+# Want to convert the data from vertical to horizontal mode, you can do this
+# 还想将数据从纵向转成横向模式, 可以这样做
+#
+
+#
+# 1. Using loop to create table  用循环方式来创建表
+#
+loop select csum(',"' || d || '" text') from (select d from cov group by d order by d)
+ create table h (c text _^1_)
+lend
+
+#
+# 2. Using loop insert data 用循环方式插入数据
+#
+loop select c from cov group by c
+ loop select "_^1_", csum(',' || dv) from (select dv from cov where c="_^1_" order by d)
+  insert into h values ("_^1_" _^2_)
+ lend
+lend 
+
+#
+# 3. Export to csv file
+#
+select * from h >csv cov_h.csv 1
+
+'''

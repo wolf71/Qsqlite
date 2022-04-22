@@ -1,0 +1,65 @@
+#
+# Crawl pages from HPA website, and then write to a table.
+# 从 HPA 网站抓取页面, 获取对应内容; 写入数据库
+#
+
+open :memory:
+
+#
+# Create crawl task table, save page url, number of records, crawl flag
+# 创建 抓取任务表, 保存页面 url, 数据量, 抓取标志 
+#
+create table job(pre text, type text, n integer, source text, flag integer)
+
+#
+# Crawl/parse data 抓取/分析数据
+#
+loop loadweb url=https://www.proteinatlas.org/humanproteome/proteinclasses re=<td nowrap>((?:&nbsp;){0,20}).+?</td>(?:.|\n)+?<a href="/search/protein_class:(.+?)">(\d+)</a>(?:.|\n)+?rel="noopener">(.*?)</a>
+  insert into job values('_^1_', '_^2_', _^3_, '_^4_', 0)
+lend
+
+# replace data / 数据替换
+update job set pre = replace(pre,'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;','-')
+
+#
+#  Create data table 
+#  创建 抓取内容保存表
+#
+create table t (id text, gene text, type text)
+
+#
+# Select you need data
+# 选择你需要的数据
+#
+loop select type from job where pre='--' and source = 'KEGG' and type not like '%cancer%' limit 3
+  echo # _^0_  Crawl: _^1_
+  #
+  # 1. Get Total Pages Count. (Note: Using ext=_^1_ pass type info to next loop) / 获取累计页数 (使用 ext=_^1_ 参数, 将类型信息传递给下一个 loop)
+  #
+  loop loadweb url=https://www.proteinatlas.org/search/protein_class:_^1_ re=TSV/JSON</a>(?:.|\n)+ onkeydown="page_link\(event, this, (\d+), (\d+), ext=_^1_
+    #
+    # 2. Crawl all pages data (Note: Page begin from 1) / 抓取所有页数的内容 (注意页数从1开始)
+    #
+    loop [ (i, '_^3_', _^2_) for i in range(1, _^2_+1) ]
+      echo - Get _^2_ page: _^1_ of _^3_
+      #
+      # 3. Get the content of each page, Parsed and inserted into the table  / 获取每一页内容, 解析后插入表
+      #
+      loop loadweb url=https://www.proteinatlas.org/search/protein_class:_^2_/_^1_ re=<td ><a href="/(ENSG00000\d+)-(.+?)" ext=_^2_
+        insert into t values('_^1_', '_^2_', '_^3_')
+      lend
+    lend
+  lend
+lend
+
+
+#
+# Check dataset / 检查一下数据集
+#
+select type, count(*) from t group by type >[# Type: _@1_, records: _@2_]
+
+#
+# Save dataset to csv file / 数据输出到一个 csv 文件
+#
+update t set type = replace(type,'+',' ')
+select * from t >csv protein_type.csv

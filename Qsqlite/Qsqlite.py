@@ -4,15 +4,15 @@
            By: Charles Lai
 '''
 
-__version__ = 0.96
+__version__ = 0.97
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.96) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.97) ======
 # command
  @ q - quit
- @ ?/h - help    or  ? querystr    etc: ? draw
- @ #/-  comment;  three ' for block comment
+ @ ?/h - help    or  ? querystr    etc: ? draw;    cls / clear - clear screen. (windows-cls, mac/linux-clear)
+ @ #/-  comment;  three ' for block comment;    { } for multi-lines block code.  ( { and } on new line )
  @ l - List last 12 cmd History; la - List all History; l0 - run last cmd; l8 - run #8 cmd; l> file / l< file (save/load cmd History to/from file )
  @ exec script - Execute a Qsqlite Script, etc: exec qInit.txt
  @ ls - List current dir files; ls *.csv or ls city
@@ -35,6 +35,10 @@ help_str = '''
  - etc: loadjson file.json table1 item (when item set, it's will select data on json item.)
  @ loop/lend function . Etc: select i1,i2 from tab / select * from tab where a = _^1_ and b = '_^2_' /lend
  - or : loop [(1,2,...),(1,2,...)...] / echo _^0_ _^1_ / lend
+ @ loop loadweb function. Etc: loop loadweb url=https://xxx.xxx/xxx re=href="/searc/(.+?)" ext=_^1_
+ @ loop [ i for i in loadweb('url=https://xxx.xxx/xxx re=href="/searc/(.+?)" ext=_^1_')[:1] ] , using in [ ]
+ @ loop [i for i in getTableCols('c')[4:]]  using getTableCols function transform table cols to rows
+ @ download function. Etc: download https://xxx.xxx/xxx test.csv   will download file from web.
  @ draw type sqlcmd (Draw data using matplotlib. type: l-line h-hist v-violin s-scatter)
  - draw l select x_lable,col1,col2 from tab1 (*first col using for matplot x-laxble) / draw ls (subplot mode)
  - draw lx select x,y from tab ( log(x) or log(y) using draw ly ) / draw ll select x,y from tab  (For log(x)/log(y))
@@ -61,8 +65,9 @@ help_str = '''
  @@ destr('123,456,34,456,1',',') -> '123,456,34,1'
  @@ select mID,csum(mName),count(*) from T group by mID
  @@ csum function; select mID,csum(userID),csum(mName) from t group by mID   or select csum('apple',1,2,3,4,5)
- @@ std function; select std(mM) from T    or  select std(1,2,3,4,5)
- @@ median function; select median(mM) from t or select median(1,3,2,5,4)
+ @@ std function; select std(mM) from T    or   select std(1,2,3,4,5)
+ @@ median function; select median(mM) from t   or   select median(1,3,2,5,4)
+ @@ summary function; select type,summary(m) from t group by type   or   select summary(3,-2,9,4,6,3) will return combined descriptive statistics string. etc: cnt=6; max=9.0; min=-2.0; avg=3.8; med=3.5; std=3.35; his=[1,0,0,0,0,0,0,2,1,0,0,1,0,0,0,1]
  @@ idcheck(id,f=0/1/2) 0-15/18;1-18;2-15 / idchecksum / idconv  (check CHINA IDCard 15/18; gen checksum; conv 15->18)
  @@ power(2,2) -> 2^2 / power(2,1.0/2) -> sqrt(2)
  @@ slist('1,2,3,4,5',2) -> 3 / slist('1,2,3,4,5',7) -> 5 (if n>len,then return last item)
@@ -74,6 +79,7 @@ help_str = '''
 # Sqlite Tips:
  - select distinct * from Table order by random() limit 2 offset 1000 (or limit s,n ==> limit n offset s)
  - select date,code1,code2 from T1 left outer join (select date as d1 from T1 where xxx) on date=d1 left outer join (select d3,code2 from T2 where xxx) on date=d3
+ - select id,name,addr from T1 union select id,uname,'---' from T2  (union or union all)
  - create table if not exists Roominfo2 (mID text PRIMARY KEY,mName real,mOrg int,PRIMARY KEY(ID ASC)) * can add without rowid 
  - SQlite data type: text, integer, real, blob
  - delete from table where a > 123 / drop table tb001
@@ -84,9 +90,11 @@ help_str = '''
  - Sqlite String add using : 'a' || 'b' ; select 'a' || x'0d' || x'0a' || 'apple'
  - cast(x as int) or cast(7/2.0 as int) or x+0 or x+0.0 / substr(str,begin,len)
  - select rowid, * from c (select system rowid); select last_insert_rowid()
+ - with recursive xx(x) as (select 1 union select x+1 from xx where x<(select max(regfn(',',fn)) from tb1)) select id,regfind('(.+?)(?:,|$)',fn,x) as s from tb1, xx where s != '')  --> let a fn col like 'fun1,fun2,fun3,fun4' to row: fun1 / fun2 / fun3 / fun4 4 rows. (col to rows)
  - SQlite system function: count, max, min, avg, sum, substr, random, abs, upper, lower, length, trim, ltrim, rtrim, replace('apple','app','*'), typeof, hex, like('%12%',name) or like('23_33',tel) or like('100\%F%', name, '\'), iif(c,x,y), coalesce(t1,t2,t3...), hex(randomblob(16)), printf('%08d is %.2fs on %-10s %,d', 34123, 3123.334, 'apple',12345) ... 
+ - Convert 1/22/20 date string to Sqlite format 2020-01-22 using: date(printf('20%d-%02d-%02d', regfind('(\d+?)(?:/|$)',d,3), regfind('(\d+?)(?:/|$)',d,1), regfind('(\d+?)(?:/|$)',d,2)))
  - Explain to see the SQLite execution policy: explain select ID from Room where m > 15
- - VACUUM : optimize the database file (small size) / pragma table_info(tb1)  will list all tb1 col info.
+ - VACUUM : optimize the database file (small size) / pragma table_info(tb1)  will list all tb1 cols info.
 '''
 
 import os, sys, math, re, time, base64, csv
@@ -107,7 +115,7 @@ except:
 #
 db, his_cmd, exec_flag = '', [], []
 # 调试/时间信息输出标志、循环LOOP标志、循环命令缓存、MySQL服务器参数字典、数据库连接字典
-dinfo_flag, loop_flag, loop_cnt, loop_cmd, mysql_srv, srv_conn  = 0, 0, 0, [], {}, {}
+dinfo_flag, loop_flag, loop_cnt, sql_block, loop_cmd, mysql_srv, srv_conn  = 0, 0, 0, '', [], {}, {}
 # Sqlite 扩展函数用到的全局变量
 sqlext_v, sqlext_s, navg_sum, navg_n, rdelta_tmp = 0, '', [], 0, None
 # html 输出文件句柄, 是否有<ul>标志
@@ -239,6 +247,87 @@ def SendMail(from_addr,password,msrv,to_addr,msgtitle,msgcontent):
     pass
   # 发送失败，返回结果
   return 0
+
+#
+# Get table cols info, using for loop
+#
+def getTableCols( tbname ):
+  res = []
+  if db and tbname:
+    # Connect SQLite
+    cx,cxt = dbconn(db)
+    cu = cx.cursor()
+    Sqlite_ext_reset()
+    # Get table cols info
+    cu.execute('pragma table_info(%s)'%tbname)
+    res = cu.fetchall()
+  # return
+  return res
+
+#
+# loadweb: load url from web, and get re item.
+#
+def loadweb( cmdstr ):
+  res = []
+  # 解析参数
+  arg = re.findall('url=(.+?) re=(.+?)(?:$| ext=(.+?)$)', cmdstr, re.IGNORECASE)
+  if arg:
+    url, rearg, extv = arg[0]
+    # 将 附加参数 分割 , 转成 tuple 类型(便于后续叠加)
+    extv = tuple( extv.split(',') )
+    try:
+      import requests
+    except ModuleNotFoundError:
+      print('# Please using pip3 install requests module.')
+      return res
+    # 通过 request 获取 web 内容
+    try:
+      r = requests.get(url, timeout = 60)
+      if r.status_code == 200:
+        info = r.text
+      else:
+        info = ''
+    except:
+      info = ''
+    # 解析内容
+    ret = re.findall(rearg, info)
+    # 获取结果
+    for i in ret:
+      # 将参数 和 扩展参数叠加
+      res.append(i + extv)
+  else:
+    print('loadweb arg error, please using loadweb url=https://xxx.xxx re=href="(.+)"> ext=_^1_, fun')
+    return res 
+  # 返回结果
+  return res
+
+#
+# Download file from web
+#
+def downloadfile(url, filename):
+  # 判断文件是否已经存在
+  if os.path.isfile(filename):
+    print('# File [%s] already exists.')
+    return 0
+  else:
+    try:
+      import requests
+    except ModuleNotFoundError:
+      print('# Please using pip3 install requests module.')
+      return -1
+    # 下载文件 (批量写入文件)
+    try:
+      r = requests.get(url, stream=True)
+      with open(filename, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8096):
+          if chunk:
+            f.write(chunk)
+    except:
+      print('# Download file error. please check network, url or filename!')
+      return -2
+    # 下载完成返回
+    print('# Download file [%s] completed.'%filename)
+    return 0
 
 #
 # Job Server
@@ -642,6 +731,64 @@ class median:
     else:
       return None
 
+# summary: 返回一个综合的 统计描述 摘要字符串, 包含系列统计信息
+# count; max; min; avg; median; [直方图]
+class summary:
+  def __init__(self):
+    self.count = []
+
+  # 每一行数据会调用这里(数据进行转换)
+  def step(self, *value):
+    for i in value:
+      try:
+        self.count.append(float(i))
+      except:
+        pass
+
+    # 最后返回结果
+  def finalize(self):
+    # 设置直方图数量
+    hn = 16
+    # 根据数据数量获取中间位置(p1,p2)
+    s = len(self.count)
+    if s > 0:
+      # 如果是偶数, 则获取中间两个的值, 而后计算平均值, 例如 [2,3,4,5] 应该计算 (3+4)/2
+      if s % 2 == 0:
+        p1 = s/2 - 1
+        p2 = p1 + 2
+      # 如果是奇数, 获取中间值, 例如 [2,3,4] -> 3
+      else:
+        p1 = (s-1) / 2
+        p2 = p1 + 1
+      # 对数据进行排序, 而后获取
+      self.count.sort()
+      v = self.count[int(p1) : int(p2)]
+      # 计算中位数 (对于偶数个数需要计算两个数的均值)
+      med = sum(v) / len(v)
+      # 计算 max, min
+      max, min = self.count[-1], self.count[0]
+      # 计算均值
+      avg = sum(self.count) / s
+      # 计算方差
+      z = [(med-i)**2 for i in self.count]
+      # 汇总方差，而后开平方得到标准差
+      std = ( sum(z)/s ) ** 0.5
+      # 计算 直方图
+      d = (max - min) / (hn - 1)
+      o = [0 for i in range(hn)]
+      # 避免 d=0 引发错误
+      if d > 0:
+        for i in self.count:
+          o[ round( (i - min) / d ) ] += 1
+      else:
+        o[0] = s
+      his = ','.join([str(i) for i in o])
+      # 返回结果集
+      return 'cnt=%d; max=%s; min=%s; avg=%s; med=%s; std=%s; his=[%s]'%(s, max, min, round(avg,3), round(med,3), round(std,3), his)
+    else:
+      return ''
+
+
 #
 # 根据f_html文件句柄，确定文件输出/屏幕输出 (对于输出到文件，提供简单Markdown转换html功能)
 #
@@ -800,6 +947,7 @@ def dbconn(dbname):
       cx.create_aggregate('csum', -1, StrSum)
       cx.create_aggregate('std', -1, Cstd)
       cx.create_aggregate('median', -1, median)
+      cx.create_aggregate('summary', -1, summary)
   # 返回连接串、连接类型
   return cx, cxt
 
@@ -1419,7 +1567,7 @@ def SQLiteQuery(sqlite_db, sql, o_disp=1):
     cnt += 1
     # 只在 o_disp == 0 的时候保存数据
     if o_disp == 0: retv.append( [j for j in row] )
-  # 表示 结果集 为空, 可能是update/del等语句，从 cx.total_changes 获取影响行数
+  # 表示 结果集 为空, 可能是update/del等语句，从 cu.rowcount 获取影响行数
   if cnt == 1:
     cnt = cu.rowcount
   else:
@@ -1681,21 +1829,37 @@ def SQliteDraw(sqlite_db, cmd):
 #		命令解析
 #
 def proc_cmd(cmd0):
-  global db, his_cmd, exec_flag, loop_flag, loop_cnt, loop_cmd, f_html, dinfo_flag, mysql_srv
+  global db, his_cmd, exec_flag, loop_flag, sql_block, loop_cnt, loop_cmd, f_html, dinfo_flag, mysql_srv
   try:
+    # 判断是否 SQL 代码块 ( { code block } ), 若是则进行行累加
+    if sql_block:
+      # SQL 代码块结束
+      if cmd0 == '}':
+        cmd0 = sql_block.strip()
+        sql_block = ''
+      else:
+        sql_block += cmd0
+        return
+    # 非 SQL 代码块正常逻辑
     cmd = cmd0.upper()
-    # 如果处在 Loop 命令中，则记录命令，直到 lend (loop_cnt>1用于将嵌套的loop/eloop排除掉)
+    # loop_flag 标志一个 loop 已开始, loop_cnt 记录 loop 嵌套层数
+    # 处在 Loop 标记块中, 记录命令到列表 loop_cmd; 如是最外层 lend (loop_cnt==1 and cmd[:4] == 'LEND'), 则交由后续 lend 模块负责执行
     if loop_flag and (cmd[:4] != 'LEND' or loop_cnt > 1):
-      # 对于内部嵌套的 loop/lend 进行处理
+      # 对于内部嵌套的 loop/lend 进行处理 (遇到 loop 嵌套层数+1, lend 层数-1)
       if cmd[:4] == 'LOOP':
         loop_cnt += 1
       if cmd[:4] == 'LEND':
         loop_cnt -= 1
       # 将 loop / lend 循环体内的指令保存起来
       loop_cmd[-1].append(cmd0)
-      return 0
-    # 解析具体指令
-    if re.findall('^(?:H|\?)($| .+)',cmd):
+    # SQL 代码块判断, 如果是则设置为' ' (非空)
+    elif cmd == '{':
+      sql_block = ' '
+    # 清屏
+    elif cmd == 'CLS' or cmd =='CLEAR':
+      os.system(cmd0)
+    # 解析具体指令, ?/h
+    elif re.findall('^(?:H|\?)($| .+)',cmd):
       help_q = cmd0[1:].strip()
       # 如果 后面有关键字，则进行过滤
       if help_q:
@@ -1817,30 +1981,36 @@ def proc_cmd(cmd0):
         else:
           print('!!! Not filename, Using html out.html ')
     elif cmd[:4] == 'LOOP':
+        # loop_flag 标志一个 loop 开始, loop_cnt 记录 loop 嵌套层数
         loop_flag = 1
         loop_cnt += 1
         loop_cmd.append([cmd0[5:] ])
+    # loop / lend 匹配完成, 执行 内部脚本
     elif cmd[:4] == 'LEND':
         loop_flag = 0
         loop_cnt = 0
         if db and loop_cmd[-1]:
           # 如果是查询语句，则执行
-          if loop_cmd[-1][0].upper().find('SELECT') >= 0:
+          if loop_cmd[-1][0].upper().strip()[:7] == 'SELECT ':
             # Connect SQLite
             cx,cxt = dbconn(db)
             cu = cx.cursor()
             Sqlite_ext_reset()
             cu.execute(loop_cmd[-1][0])
             res = cu.fetchall()
+          # loadweb 则获取网页, 正则提取内容
+          elif loop_cmd[-1][0].upper().strip()[:8] == 'LOADWEB ':
+            # 执行 loadweb 返回解析结果
+            res = loadweb( loop_cmd[-1][0] )
           else:
-            # 如果为非查询语句，则判断是否为列表
+            # 非select/loadweb语句, 作为列表处理
             try:
               res = eval(loop_cmd[-1][0])
               # 用这个进行测试，看看数据是否二维 [(1,2),(1,2)]
               tmp = res[0][0]
             except:
-              print('loop error,please using [(1,2,...),(1,2,...)...]')
-              return 0
+              print('loop error, please using [(1,2,...),(1,2,...)...]')
+              res = []
           # 用结果集替换所有 loop 结构体内的特定内容 _@n_
           cnt = 0
           sub_loop = 0		# 是否遇到嵌套 loop
@@ -1853,8 +2023,8 @@ def proc_cmd(cmd0):
                 sub_loop += 1
               if tmp[j][:4].upper() == 'LEND':
                 sub_loop -= 1
-              # 对于 没有发现嵌套，或者第一层嵌套的 LOOP ，使用替换；否则不进行替换
-              if not sub_loop or (sub_loop == 1 and tmp[j][:4].upper() == 'LOOP'):
+              # 对 非嵌套，或第一层嵌套的 LOOP ，使用替换；否则不进行替换
+              if sub_loop == 0 or (sub_loop == 1 and tmp[j][:4].upper() == 'LOOP'):
                 # 对于 _^0_ 替换为顺序号
                 tmp[j] = tmp[j].replace('_^0_',str(cnt))
                 for i, d in enumerate(row):
@@ -1865,7 +2035,7 @@ def proc_cmd(cmd0):
           # 完成循环后，弹出
           loop_cmd.pop()
         else:
-          print('!!! Not Open Database or not loop.')
+          print('!!! Not Open Database or loop is none.')
     # 列出当前目录文件 (ls or ls *.csv)
     elif cmd[:2] == 'LS':
       ext_str = cmd0[3:].strip().replace('*','.*')
@@ -1875,6 +2045,17 @@ def proc_cmd(cmd0):
         if ext_str == '' or re.search(ext_str, f, re.IGNORECASE):
           d_cnt += 1
           print('- %d %s (%sK)'%(d_cnt, f, format(round(os.path.getsize(f)/1024), ',d' )) )
+    # 下载文件
+    elif cmd[:9] == 'DOWNLOAD ':
+      dfarg = re.findall('(http[s]{0,1}:\/\/.+?) (.+?)$', cmd0[9:])
+      if dfarg:
+        url, fname = dfarg[0][0].strip(), dfarg[0][1].strip()
+        if url and fname:
+          downloadfile(url, fname)
+        else:
+          print('# Please check filename.')
+      else:
+        print('# Using download https://xxx.xxx/ddd myfile.csv')
     # 执行脚本命令
     elif cmd[:5] == 'EXEC ':
       e_file = cmd0[5:].strip()
