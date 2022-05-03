@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.97
+__version__ = 0.971
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.97) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.971) ======
 # command
  @ q - quit
  @ ?/h - help    or  ? querystr    etc: ? draw;    cls / clear - clear screen. (windows-cls, mac/linux-clear)
@@ -29,7 +29,7 @@ help_str = '''
  @ dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
  @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file)
  - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (csv line 1 as title)
- @ loadgb - load bioinformatics genebank file features info to table. (etc: loadgb file tb01)
+ @ loadgb - load bioinformatics genbank file features info to table. (etc: loadgb file tb01)
  @ >csv file.csv 1/0  export select result to csv file (0/1 - with/without rowinfo)
  @ loadjson - load json file and copy to new table
  - etc: loadjson file.json table1 item (when item set, it's will select data on json item.)
@@ -307,7 +307,7 @@ def loadweb( cmdstr ):
 def downloadfile(url, filename):
   # 判断文件是否已经存在
   if os.path.isfile(filename):
-    print('# File [%s] already exists.')
+    print('# File [%s] already exists.'%filename)
     return 0
   else:
     try:
@@ -1239,13 +1239,13 @@ def loadJSON(dbname, fname, t_name, vitem):
 
 
 #
-# 读取 GeneBank 格式文件 Features 数据, 写入数据库表
+# 读取 GenBank 格式文件 Features 数据, 写入数据库表
 #	 Features Ref: https://www.insdc.org/files/feature_table.html
 #
-def loadGeneBank(dbname, f_name, t_name):
+def loadGenBank(dbname, f_name, t_name):
   '''
-    读取 GeneBank 格式文件，将 Features 的注释信息内容写入数据库表
-    f_name: genebank 格式数据文件;  t_name: 数据库表名
+    读取 GenBank 格式文件，将 Features 的注释信息内容写入数据库表
+    f_name: genbank 格式数据文件;  t_name: 数据库表名
   '''
   f_flag, locus, last_rec, n_first = 0, '', '', ''
   gbinfo, definfo, refinfo, gbitem, defitem, refitem = [], [], [], {}, {}, {}
@@ -1688,7 +1688,7 @@ def SQliteDraw(sqlite_db, cmd):
     import matplotlib.pyplot as plt
     import locale
     # 只有中文环境才进行 PIL 字体设置
-    if locale.getdefaultlocale()[0] == 'zh_CN':
+    if locale.getdefaultlocale()[0] == 'zh_CN': 
       # Matplotlib 中文字体 设置
       if sys.platform == 'darwin':
         # Mac 系统配置
@@ -1838,7 +1838,7 @@ def proc_cmd(cmd0):
         cmd0 = sql_block.strip()
         sql_block = ''
       else:
-        sql_block += cmd0
+        sql_block += ' ' + cmd0
         return
     # 非 SQL 代码块正常逻辑
     cmd = cmd0.upper()
@@ -1950,9 +1950,9 @@ def proc_cmd(cmd0):
         if v:
           gbfile = v[0][0].strip()
           tbl = v[0][1].strip()
-          loadGeneBank( db, gbfile, tbl )
+          loadGenBank( db, gbfile, tbl )
         else:
-          print('!!! Using loadgb genebank table')
+          print('!!! Using loadgb genbank table')
       else:
         print('!!! Not Open Database.')
     elif cmd[:8] == 'LOADJSON':
