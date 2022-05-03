@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.971
+__version__ = 0.972
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.971) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.972) ======
 # command
  @ q - quit
  @ ?/h - help    or  ? querystr    etc: ? draw;    cls / clear - clear screen. (windows-cls, mac/linux-clear)
@@ -1702,6 +1702,8 @@ def SQliteDraw(sqlite_db, cmd):
   except ModuleNotFoundError:
     print('# Please install matplotlib, using: pip3 install matplotlib')
     return -1
+  except Exception:
+    pass
   # 设置 Plot 绘制多条线的颜色顺序 for name, hex in matplotlib.colors.cnames.items():
   # plt_color = ('#1f77b4','blue','green','red','cyan','magenta','yellow','coral')
   plt_color = ('#17becf', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22')
