@@ -4,7 +4,7 @@
 - A **command line tool** to interactively manipulate sqlite or mysql databases for fast data processing, analysis, statistics, and graphical presentation;
   - General sqlite operations (just like the sqlite cmd tools); can be easily manipulated using sql statements.
   - Support sqlite and sqlite memory database (:memory:), support mysql database, copy whole mysql database to sqlite, copy tables between different sqlite databases.
-  - Load csv or json data, or export select results to csv file.
+  - Load csv/tsv or json data, or export select results to csv/tsv file.
   - Draw graphs with the data obtained by select statement, such as: scatter, line, histogram (distribution), violin graph (based on data distribution).
   - Provide a series of extended sqlite functions, supporting regular operations, text-based sum operations, Chinese ID recognition, and other extended functions.
 - A **script interpreter** that can write script files to batch and automate a series of operations to achieve data processing, analysis, and report output;
@@ -16,7 +16,7 @@
   - The web server can be scripted to enable data query and data insertion operations to facilitate the interaction of data statistics and analysis results in a browser-based.
   - Job server can be defined by scripts to achieve regular data cleaning, data aggregation, analysis, report generation, and output as local files or send emails to share the results.
 - A **python libray**  Can be imported using: from Qsqlite import Qexec , for use in python or jupyter/ipython ipynb notebooks using Qexec(cmds) calls, cmds can be a string with newlines,including a series of commands or a command.
-- **Summary**: With sqlite's powerful sql syntax and high performance, Qsqlite hopes to enable you to efficiently use the power of sqlite and sql syntax to **quickly** organize, analyze, aggregation, and show result; and collaborate with Excel by exporting/importing csv files when needed to achieve greater efficiency.
+- **Summary**: With sqlite's powerful sql syntax and high performance, Qsqlite hopes to enable you to efficiently use the power of sqlite and sql syntax to **quickly** organize, analyze, aggregation, and show result; and collaborate with Excel by exporting/importing csv/tsv files when needed to achieve greater efficiency.
 
 ![Draw function demo](https://github.com/wolf71/Qsqlite/blob/master/draw.jpeg?raw=true)
 
@@ -59,6 +59,7 @@
   1. create a MySQL database connection with **mysql dbname server user password**
     - For example: mysql test 127.0.0.1 root pwd (To set the MySQL port number, use: mysql test 127.0.0.1:3308 root pwd)
     - You can set multiple MySQL databases with mysql command and then switch them with open;
+    - Enter mysql will display currently mysql server list; if none setup, a reminder will show;
   2. Use **open #dbname#** to open/switch the MySQL database;
   3. some MySQL commands
     - show databases     Lists all databases on the database server
@@ -118,8 +119,11 @@
       - tab01 ( "ID" text, "Name" text, "Tele" text )
   - loadcsv also support **tsv format** file (\t split type), just using: loadcsv test.tsv tb1 1
   - loadcsv also support **bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
-- 2.2 Exporting csv
-  - Use **>csv csv file name 0/1** (The parameter 0/1 indicates whether to export the table header information. 0-no export, 1-export)
+  - loadcsv support gzip / zip file, Judging by file extension; etc: test.tsv.gz / test.gtf.gz / test.csv.zip
+- 2.2 Exporting csv/tsv
+  - Use **>csv csv/tsv file name 0/1** (The parameter 0/1 indicates whether to export the table header information. 0-no export, 1-export)
+  - if file name has xxx.tsv will export tsv format, otherwise csv format.
+  - if file name has xxx.tsv.gz or xxx.csv.gz , will be exported in the corresponding format and gzip compressed.
   - Example: select * from table1 where n=300 >csv user1.csv 1 , export the contents of a table to user1.csv file by select and export the table header information (the first line of the exported csv file is the database table header information)
   - Example: select ID, name, sum(val) as val from tab1 group by ID limit 100 >csv test1.csv 0
 - 2.3 Load Simply json data, Example: JSON file t1.json like this:
@@ -155,6 +159,7 @@
     - start, end content only for (123..345) Simple location, for join/complement such complex location, fill in 0, 0, real content in the location field.
     - The note field is a compound field that aggregates all other contents of Features here, using item1=value1;item2=value2 ... Schema expression.
     - The translation content of Features, the file's sequence information ORIGIN are ignored.
+    - Support xxx.gb.gz or xxx.gbff.gz, if file name last .gz , will open it's as gzip format.
 - 2.6 Crawl website data, parse and write to database
   - using: **loop loadweb url=https://xxx.xxx.com/xxx re=<a href="/search:(.+?)">(\d+)</a>**, base on python regular module, Qsqlite loop nesting function, can achieve complex web data crawling and content extraction, and then write to the database.
   - loadweb parameter:
@@ -525,6 +530,7 @@
 - 2022/04/02   V0.95 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
 - 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 - 2022/04/20   V0.97 Add ext-sql function: summary, and loop loadweb, download function.
+- 2024/04/25   V0.973 fix summary std function bug, add >csv support tsv format. add .gz/.zip support.
 
 ## sqlite references
 - SQlite3 Doc

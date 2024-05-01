@@ -4,7 +4,7 @@
 - 一个**命令行工具**，可通过交互方式来操作 sqlite 或 mysql 数据库, 快速实现数据处理、分析、统计、图形展示工作;
   - 常规 sqlite 操作（类似于 sqlite 提供的命令行工具); 可以方便的使用 sql 语句进行操作.
   - 支持 sqlite 及 sqlite 内存数据库(:memory:)、支持mysql数据库、将整个mysql数据库复制到sqlite、sqlite 不同数据库间表的复制操作.
-  - 加载 csv 或 json 数据，或将 select 结果输出到 csv 文件.
+  - 加载 csv/tsv 或 json 数据，或将 select 结果输出到 csv/tsv 文件.
   - 用 select 语句获取的数据绘制图形，例如：散点图、折线图、直方图(分布)、小提琴图(基于数据分布).
   - 提供系列扩展的 sqlite 函数，支持 正则操作、基于文本的sum操作、中国身份证识别等扩展功能.
 - 一个**脚本解释器**，可以通过编写脚本文件，批量、自动化执行系列操作，实现数据处理、分析、报表输出工作;
@@ -16,12 +16,14 @@
   - Web 服务器可通过脚本定义来实现数据查询，数据插入操作，便于将数据统计、分析结果以 浏览器 方式实现交互.
   - Job 服务器可通过脚本定义来实现定时的数据清理、数据汇总、分析、报表生成，并且以本地文件输出，或发送邮件方式分享结果.
 - 一个**Python库**, 通过 from Qsqlite import Qexec 导入, 在 python 或 ipynb jupyter/ipython notebook 中使用 Qexec(cmds) 调用, cmds 可以是一个带换行符的字符串，包括系列的命令 或 一个指令.
-- **总结**: 借助 sqlite 强大的 sql 语法功能 和 高性能的表现，Qsqlite希望能让你**高效**的发挥 sqlite 和 sql语法 的能力，快速实现数据的整理、分析、统计、展示工作；并在需要时可通过导出/导入 csv 文件和 Excel 进行协同工作，实现更高效率。
+- **总结**: 借助 sqlite 强大的 sql 语法功能 和 高性能的表现，Qsqlite希望能让你**高效**的发挥 sqlite 和 sql语法 的能力，快速实现数据的整理、分析、统计、展示工作；并在需要时可通过导出/导入 csv/tsv 文件和 Excel 进行协同工作，实现更高效率。
 ![Draw function demo](draw.jpeg)
 
 
 ## 快速使用
-1. 将 Qsqlite.py 复制到本地, 而后在 命令行/终端 下运行 python Qsqlite.py (请确认使用 python3 环境运行)
+1. 安装
+  - 使用 pip install qsqlite 安装; 而后输入 Qsqlite 运行; 
+  - 或将 Qsqlite.py 复制到本地, 而后在 命令行/终端 下运行 python Qsqlite.py (请确认使用 python3 环境运行)
 2. 现在你可以输入 sql 指令或输入 ? 来获取帮助信息，或者尝试将下面指令复制进去运行测试一下
 ```sql
   # 打开一个内存数据库
@@ -57,6 +59,7 @@
   1. 用 **mysql dbname server user password** 创建一个MySQL数据库连接
     - 例如: mysql test 127.0.0.1 root pwd  (如需设置 MySQL 端口号，可用: mysql test 127.0.0.1:3308 root pwd)
     - 可用 mysql 指令设置多个 MySQL 的数据库，而后用 open 来切换;
+    - 直接输入 mysql 后会显示当前已经设置的 mysql 服务器列表; 如果当前没有设置, 则会给出设置提醒
   2. 用 **open #dbname#** 来打开/切换 MySQL 数据库;
   3. 一些 MySQL 命令
     - show databases     列出数据库服务器上的所有数据库
@@ -116,8 +119,11 @@
       - tab01 ( "ID" text, "Name" text, "Tele" text )
   - loadcsv 也支持 **tsv 格式**文件 (用 \t 分割的类型), 使用: loadcsv test.tsv tb1 1 加载即可.
   - loadcsv 也支持 **生物信息学 .maf/.vcf/.sam/.gtf/.gff/.gpd file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
-- 2.2 导出 csv
-  - 使用 **>csv csv文件名 0/1** (后面的参数0/1 表示是否导出表头信息. 0-不导出, 1-导出)
+  - loadcsv 支持直接加载 gzip / zip 压缩文件; 通过后缀名判断; 例如 test.tsv.gz / test.gtf.gz / test.csv.zip
+- 2.2 导出 csv / tsv
+  - 使用 **>csv csv/tsv文件名 0/1** (后面的参数0/1 表示是否导出表头信息. 0-不导出, 1-导出)
+  - 如果 文件名后缀是 .tsv 则会导出 tsv 格式文件, 否则将作为 csv 格式导出
+  - 如果 文件名后缀是 .tsv.gz 或 .csv.gz 则会导出对应格式文件，并且 gzip 压缩
   - 例如: select * from table1 where n=300 >csv user1.csv 1 , 通过 select 将 某个表的内容导出到 user1.csv 文件，并且导出表头信息(导出的csv文件第一行是数据库表头信息)
   - 例如: select ID, name, sum(val) as val from tab1 group by ID limit 100 >csv test1.csv 
 - 2.3 简单 JSON 数据加载, 例如: JSON 文件 t1.json 内容如下:
@@ -154,6 +160,7 @@
     - start, end 内容只对 (123..345) 这种确定起点,结束点的位置进行解析, 对于 join / complement 这类复杂地址, 则填入 0, 0 , 具体内容放在 location 字段；
     - note 字段是一个复合字段, 将 Features 里面的其它各项内容聚合在这里, 使用 item1=value1;item2=value2 ... 模式表达
     - Features 的 translation 内容, 文件的 序列信息 ORIGIN 都会被 忽略
+    - 支持 xxx.gb.gz 或 xxx.gbff.gz , 如果后缀包含 .gz 将会以 gzip 压缩格式打开
 - 2.6 抓取网站数据, 解析后写入数据库
   - 使用: **loop loadweb url=https://xxx.xxx.com/xxx re=<a href="/search:(.+?)">(\d+)</a>**, 结合 python re 正则模块, loop 嵌套功能 ，可实现复杂的网页数据抓取和内容提取, 而后写入数据库
   - loadweb 参数:
@@ -394,7 +401,7 @@
 ```
   - 更详细,完整的例子可以参考 demo 目录下的 qcov.txt (从GitHub下载霍普金斯大学新冠疫情数据, 而后进行转换, 使用)
 
-### 6. WebServer 支持 （单线程)
+### 6. WebServer 支持 (单线程)
 - 6.1 设置 Web 服务器
   - 在脚本文件中使用 **@webserver ip:port** 来启动 web 服务器; 脚本中带有 @webserver 则被判断为 Web 脚本, 程序会保持运行, 直到用户用 ctrl + c 退出, 或者终止进程
   - WebServer 只支持单线程, 只是为了更便利的用 Web 访问数据，而非为性能考虑
@@ -521,6 +528,7 @@
 - 2022/04/02   V0.95 Add tsv/maf/vcf file support on loadcsv, load Chinese font for draw.
 - 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 - 2022/04/20   V0.97 Add ext-sql function: summary, and loop loadweb, download function.
+- 2024/04/25   V0.973 fix summary std function bug, add >csv support tsv format. add .gz/.zip support.
 
 ## sqlite 参考资料
 - SQlite3 Doc

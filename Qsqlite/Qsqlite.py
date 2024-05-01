@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.972
+__version__ = 0.973
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.972) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.973) ======
 # command
  @ q - quit
  @ ?/h - help    or  ? querystr    etc: ? draw;    cls / clear - clear screen. (windows-cls, mac/linux-clear)
@@ -27,10 +27,11 @@ help_str = '''
  - etc: copy new.db tb01 select * from tb00 where age < 100 limit 10
  - !same db,can using: insert into tb01 select a,b,c from tb00 where a<10
  @ dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
- @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file)
+ @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file; support .gz or .zip file)
  - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (csv line 1 as title)
+ - etc: loadcsv file.tsv.gz table1 or loadcsv file.gtf.zip
  @ loadgb - load bioinformatics genbank file features info to table. (etc: loadgb file tb01)
- @ >csv file.csv 1/0  export select result to csv file (0/1 - with/without rowinfo)
+ @ >csv file.csv 1/0  export select result to csv/tsv file (0/1 - with/without rowinfo; file.tsv export tsv format; file.csv.gz export csv file and gzip.)
  @ loadjson - load json file and copy to new table
  - etc: loadjson file.json table1 item (when item set, it's will select data on json item.)
  @ loop/lend function . Etc: select i1,i2 from tab / select * from tab where a = _^1_ and b = '_^2_' /lend
@@ -94,15 +95,15 @@ help_str = '''
  - SQlite system function: count, max, min, avg, sum, substr, random, abs, upper, lower, length, trim, ltrim, rtrim, replace('apple','app','*'), typeof, hex, like('%12%',name) or like('23_33',tel) or like('100\%F%', name, '\'), iif(c,x,y), coalesce(t1,t2,t3...), hex(randomblob(16)), printf('%08d is %.2fs on %-10s %,d', 34123, 3123.334, 'apple',12345) ... 
  - Convert 1/22/20 date string to Sqlite format 2020-01-22 using: date(printf('20%d-%02d-%02d', regfind('(\d+?)(?:/|$)',d,3), regfind('(\d+?)(?:/|$)',d,1), regfind('(\d+?)(?:/|$)',d,2)))
  - Explain to see the SQLite execution policy: explain select ID from Room where m > 15
+ - loadcsv xxx.gtf gene , And then: select regfind('gene_id "(.+?)";',attributes,1) as id, regfind('gene_name "(.+?)";',attributes,1) as gene, regfind('gene_type "(.+?)";',attributes,1) as type from gene
  - VACUUM : optimize the database file (small size) / pragma table_info(tb1)  will list all tb1 cols info.
 '''
 
-import os, sys, math, re, time, base64, csv
+import os, sys, math, re, time, base64, csv, gzip, zipfile
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, unquote
-from io import BytesIO,StringIO
-from random import random
+from io import BytesIO, StringIO, TextIOWrapper
 
 # for Linux/MacOS input() can get history by arrow key
 try:
@@ -686,7 +687,10 @@ class Cstd:
     # 每一行数据会调用这里
   def step(self, *value):
     for i in value:
-      self.count.append(i)
+      try:
+        self.count.append(float(i))
+      except:
+        pass
 
     # 最后返回结果
   def finalize(self):
@@ -770,10 +774,11 @@ class summary:
       # 计算均值
       avg = sum(self.count) / s
       # 计算方差
-      z = [(med-i)**2 for i in self.count]
-      # 汇总方差，而后开平方得到标准差
-      std = ( sum(z)/s ) ** 0.5
-      # 计算 直方图
+      z = [(avg-i)**2 for i in self.count]
+      # 汇总方差，而后开平方得到 标准方差 (这里计算的是总体标准差)
+      # 如果要计算样本标准差: std = ( sum(z)/(s-1 if s > 1 else s) ) ** 0.5
+      std = ( sum(z)/ s ) ** 0.5
+      # 计算 直方图 (把数据根据 最大-最小 值均分为 hn 段, 而后看看大致落在哪段的数量)
       d = (max - min) / (hn - 1)
       o = [0 for i in range(hn)]
       # 避免 d=0 引发错误
@@ -957,11 +962,21 @@ def dbconn(dbname):
 #
 def loadCSV(dbname, fname, tname, ftype, tsv=0):
   # 默认用 utf-8 打开文件，如果出错，则改用默认方式
-  wt = 2				# 默认尝试2次，一次用UTF-8解码，一次GBK
-  bt = time.time()	
+  wt = ['GBM','utf-8-sig']				# 默认尝试2次，一次用UTF-8解码，一次GBK; wt.pop(), 顺序反写
+  bt = time.time()
+  fname = fname.strip()
+  # 根据文件名判断压缩文件类别 (z_type: 0-非压缩, 1-gzip, 2-zip)
+  if fname[-3:].upper() == '.GZ':
+    z_type = 1
+    l_ext = fname[-7:-3].upper()
+  elif fname[-4:].upper() == '.ZIP':
+    z_type = 2
+    l_ext = fname[-8:-4].upper()
+  else:
+    z_type = 0
+    l_ext = fname[-4:].upper()
   # 根据文件名, 判断 CSV or TSV
   # 对于 .maf / .vcf 文件, 需要跳过前面部分(p_ext) #/## 的注释, p_n 表示 p_ext 的长度
-  l_ext = fname.strip()[-4:].upper()
   if l_ext == '.TSV':
     tsv = 1
     p_ext, p_n = '', 0
@@ -983,13 +998,19 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
   else:
     p_ext, p_n = '', 0
   # 读取文件, 检查是否符合要求
-  while wt > 0:
-    wt -= 1
+  while wt:
+    en_code = wt.pop()
     try:
-      if wt == 1:	# 先用 UTF-8 读取
-        f = open(fname, 'r', encoding='utf-8-sig', newline='')	#utf-8-sig也能解析utf-8内容
-      else:		# 否则改用 GBK
-        f = open(fname, 'r', encoding='GBK', newline='')
+      # 根据文件压缩类型, 使用不同的文件打开方式 (1-gzip, 2-zip, 0-normal)
+      # utf-8-sig也能解析utf-8内容
+      if z_type == 1:
+        f = gzip.open(fname, 'rt', encoding = en_code)
+      elif z_type == 2:
+        gz_f = zipfile.ZipFile(fname, 'r')
+        # 获取 ZIP 文件中的第一个文件, 并且通过 io.TextIOWrapper 方式来解码
+        f = TextIOWrapper(gz_f.open(gz_f.namelist()[0], 'r'), encoding = en_code)
+      else:
+        f = open(fname, 'r', encoding = en_code, newline = '')	
       # 读取文件 (cnt - 列数, rsize - 行数, skip_r - 跳过前面 行数, i_note: maf/vcf 文件注释 )
       cnt, err, rsize, skip_r = 0, 0, 0, 0
       i_note = []
@@ -1061,8 +1082,21 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
       rcnt = ','.join(['?' for i in range(cnt)])
     # create new table
     cu.execute('create table if not exists %s (%s);'%(tname,row))
-    # 文件指针回到开头位置
-    f.seek(0, 0)
+    # 文件指针回到开头位置(因为 zipfile 不支持 seek 功能, 因此需要重新打开)
+    if z_type == 2:
+      # 先关闭之前打开的文件，而后再打开
+      f.close()
+      gz_f.close()
+      # 重新打开文件
+      gz_f = zipfile.ZipFile(fname, 'r')
+      # 获取 ZIP 文件中的第一个文件, 并且通过 io.TextIOWrapper 方式来解码
+      f = TextIOWrapper(gz_f.open(gz_f.namelist()[0], 'r'), encoding = en_code)
+      if tsv:
+        r = csv.reader(f, delimiter='\t')
+      else:
+        r = csv.reader(f) #, delimiter=' ', quotechar='|')
+    else:
+      f.seek(0, 0)
     # 如果第一行是表头, 则递增 跳过计数器
     if ftype == 1: skip_r += 1
     # 跳过 头部 注释记录
@@ -1273,8 +1307,11 @@ def loadGenBank(dbname, f_name, t_name):
   # 简单的 Location 提取 (33..456 / 33.456) -> start,end
   re_slocation = re.compile('^(\d+)(?:\.{1,2})(\d+)$')
 
-  # 读取文件
-  f = open(f_name, 'r',  encoding='utf-8')
+  # 读取文件(如果后缀.gz, 则以 gzip 方式打开)
+  if f_name[-3:].upper() == '.GZ':
+    f = gzip.open(f_name, 'rt', encoding='utf-8')
+  else:
+    f = open(f_name, 'rt', encoding='utf-8')
   for i in f:
     # 初始化已解析标志
     r_ok = 0
@@ -1528,8 +1565,18 @@ def SQLiteQuery(sqlite_db, sql, o_disp=1):
         return -1
       # 输出到csv文件
       else:
-        f = open(csv_file, 'w', encoding='utf_8_sig', newline='')		#excel 用utf-8 有问题
-        csv_f = csv.writer(f)
+        # 判断是否需要使用 gzip 压缩输出文件
+        if csv_file[-3:].upper() == '.GZ':
+          f = gzip.open(csv_file, 'wt', encoding='utf_8_sig', newline='')
+          ext_flag = csv_file[-7:-3]
+        else:
+          f = open(csv_file, 'wt', encoding='utf_8_sig', newline='')		#excel 用utf-8 有问题
+          ext_flag = csv_file[-4:]
+        # 根据文件后缀判断(.csv or .tsv)来设置参数
+        if ext_flag.upper() == '.TSV':
+          csv_f = csv.writer(f, delimiter='\t')
+        else:
+          csv_f = csv.writer(f)
   # Connect SQLite
   bt = time.time()
   cx, cxt = dbconn(sqlite_db)
@@ -1574,7 +1621,7 @@ def SQLiteQuery(sqlite_db, sql, o_disp=1):
     cnt -= 1
   if csv_flag:
     f.close()
-    if o_disp: print('-- Total Write %d lines to csv file.'%(cnt))
+    if o_disp: print('-- Total Write %d lines to %s .'%(cnt, csv_file))
   elif not o:
     if o_disp: print('------ Total: %d ------ '%(cnt))
   cx.commit()
@@ -1889,7 +1936,12 @@ def proc_cmd(cmd0):
       if s:
         mysql_srv[s[0][0]] = [s[0][1],s[0][2],s[0][3]]
       else:
-        print('!!! Please using: mysql dbname serverip user password')
+        # 显示 当前存储的 mysql 列表
+        if mysql_srv:
+          for t_mysql in mysql_srv:
+            print(f'- MySQL Server: [{t_mysql}], {mysql_srv[t_mysql]}')
+        else:
+          print('!!! Please using: mysql dbname serverip user password')
     elif cmd[:2] == 'DB':
       print('- SQLite Version: %s'%(sqlite3.sqlite_version))
       if db:
