@@ -118,7 +118,7 @@
     - Set the table information based on the csv table header information, for example
       - tab01 ( "ID" text, "Name" text, "Tele" text )
   - loadcsv also support **tsv format** file (\t split type), just using: loadcsv test.tsv tb1 1
-  - loadcsv also support **bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
+  - loadcsv also support **bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd/.gct file**, just using: loadcsv test.maf tb1   or  loadcsv test.vcf tb1
   - loadcsv support gzip / zip file, Judging by file extension; etc: test.tsv.gz / test.gtf.gz / test.csv.zip
 - 2.2 Exporting csv/tsv
   - Use **>csv csv/tsv file name 0/1** (The parameter 0/1 indicates whether to export the table header information. 0-no export, 1-export)
@@ -531,6 +531,7 @@
 - 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 - 2022/04/20   V0.97 Add ext-sql function: summary, and loop loadweb, download function.
 - 2024/04/25   V0.973 fix summary std function bug, add >csv support tsv format. add .gz/.zip support.
+- 2024/05/15   V0.974 Add .gct file support on loadcsv
 
 ## sqlite references
 - SQlite3 Doc

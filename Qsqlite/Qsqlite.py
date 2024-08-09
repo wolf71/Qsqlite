@@ -4,11 +4,11 @@
            By: Charles Lai
 '''
 
-__version__ = 0.973
+__version__ = 0.974
 __author__ = 'Charles Lai'
 
 help_str = '''
-====== Qsqlite (Quick Sqlite Tools) Help (V0.973) ======
+====== Qsqlite (Quick Sqlite Tools) Help (V0.974) ======
 # command
  @ q - quit
  @ ?/h - help    or  ? querystr    etc: ? draw;    cls / clear - clear screen. (windows-cls, mac/linux-clear)
@@ -27,7 +27,7 @@ help_str = '''
  - etc: copy new.db tb01 select * from tb00 where age < 100 limit 10
  - !same db,can using: insert into tb01 select a,b,c from tb00 where a<10
  @ dump #mysqldb# sqlitedb (Dump mysql database to sqlite with data.)
- @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd file; support .gz or .zip file)
+ @ loadcsv - load csv file and copy to new table (and support .tsv file, bioinformatics .maf/.vcf/.sam/.gtf/.gff/.gpd/.gct file; support .gz or .zip file)
  - etc: loadcsv file.csv table1	 or loadcsv file.csv table1 1 (csv line 1 as title)
  - etc: loadcsv file.tsv.gz table1 or loadcsv file.gtf.zip
  @ loadgb - load bioinformatics genbank file features info to table. (etc: loadgb file tb01)
@@ -96,6 +96,7 @@ help_str = '''
  - Convert 1/22/20 date string to Sqlite format 2020-01-22 using: date(printf('20%d-%02d-%02d', regfind('(\d+?)(?:/|$)',d,3), regfind('(\d+?)(?:/|$)',d,1), regfind('(\d+?)(?:/|$)',d,2)))
  - Explain to see the SQLite execution policy: explain select ID from Room where m > 15
  - loadcsv xxx.gtf gene , And then: select regfind('gene_id "(.+?)";',attributes,1) as id, regfind('gene_name "(.+?)";',attributes,1) as gene, regfind('gene_type "(.+?)";',attributes,1) as type from gene
+ - select data to new table: create table newtb as select name, count(*) as cnt from s group by name
  - VACUUM : optimize the database file (small size) / pragma table_info(tb1)  will list all tb1 cols info.
 '''
 
@@ -975,28 +976,31 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
   else:
     z_type = 0
     l_ext = fname[-4:].upper()
-  # 根据文件名, 判断 CSV or TSV
-  # 对于 .maf / .vcf 文件, 需要跳过前面部分(p_ext) #/## 的注释, p_n 表示 p_ext 的长度
+  # 根据文件名判断不同类别文件, 设定对应解析参数
+  #    ftype: 是否需要过滤掉第一行;         tsv: 是否\t分割; 
+  #    p_ext: 注释字符(etc: #/##/@ 等);   skip_n: 跳过前面 n 行; 
   if l_ext == '.TSV':
     tsv = 1
-    p_ext, p_n = '', 0
+    p_ext, skip_n = '', 0
   elif l_ext == '.MAF':
     ftype, tsv = 1, 1
-    p_ext, p_n = '#', 1
+    p_ext, skip_n = '#', 0
   elif l_ext == '.VCF':
     ftype, tsv = 1, 1
-    p_ext, p_n = '##', 2
+    p_ext, skip_n = '##', 0
   elif l_ext == '.SAM':
     ftype, tsv = 0, 1
-    p_ext, p_n = '@', 1
-  elif l_ext == '.GTF' or l_ext == '.GFF':
+    p_ext, skip_n = '@', 0
+  elif l_ext == '.GTF' or l_ext == '.GFF' or l_ext == '.GPD':
     ftype, tsv = 0, 1
-    p_ext, p_n = '#', 1
-  elif l_ext == '.GPD':
-    ftype, tsv = 0, 1
-    p_ext, p_n = '#', 1
+    p_ext, skip_n = '#', 0
+  elif l_ext == '.GCT':
+    ftype, tsv = 1, 1
+    p_ext, skip_n = '', 2    # .GCT 文件 第一行是版本号, 第二行是样本数量描述, 需要跳过
   else:
-    p_ext, p_n = '', 0
+    p_ext, skip_n = '', 0
+  # 计算 p_n (注释字符 p_ext 长度)
+  p_n = len(p_ext)
   # 读取文件, 检查是否符合要求
   while wt:
     en_code = wt.pop()
@@ -1012,15 +1016,20 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
       else:
         f = open(fname, 'r', encoding = en_code, newline = '')	
       # 读取文件 (cnt - 列数, rsize - 行数, skip_r - 跳过前面 行数, i_note: maf/vcf 文件注释 )
-      cnt, err, rsize, skip_r = 0, 0, 0, 0
-      i_note = []
+      cnt, rsize, skip_r, i_note = 0, 0, skip_n, []
+      # 用于跳过前面 n 行 的计数器
+      skip_cnt = skip_n
       # 如果是 TSV 格式, 按照 \t 分割
       if tsv:
         r = csv.reader(f, delimiter='\t')
       else:
         r = csv.reader(f) #, delimiter=' ', quotechar='|')
       for t in r:
-        # 对于 maf/vcf 文件, 需要检测前部注释,并且跳过
+        # 如果需要跳过 n 行, 则跳过
+        if skip_cnt > 0:
+          skip_cnt -= 1
+          continue
+        # 如果有注释符, 则判断,跳过
         if p_n:
           # 如果是注释行
           if t[0][:p_n] == p_ext:
@@ -1043,11 +1052,13 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
           if ftype == 1:
             info = t
             # 对于 vcf 文件, 需要过滤掉表头前的 # 符号 (#name	code)
-            if p_ext == '##': info[0] = info[0][1:]
+            if l_ext == '.VCF': info[0] = info[0][1:]
       # 读取完成，表示不需要再尝试，直接退出
+      err = 0
       break
     except UnicodeDecodeError:
       print('@ UTF-8 Encoding Error, Try Using GBK.')
+      err = 1
       continue
     except:
       err = 2
@@ -1104,11 +1115,11 @@ def loadCSV(dbname, fname, tname, ftype, tsv=0):
       next(r)
       skip_r -= 1
     # 批量写入数据 (对于 非 csv/tsv 的生物信息学文件, 可能中间包含注释, 因此需要用逐行解析方式)
-    if l_ext in ('.CSV', '.TSV'):
+    if p_n == 0: # l_ext in ('.CSV', '.TSV')
       cu.executemany('insert into %s values (%s)'%(tname, rcnt), r)
     else:
       for t in r:
-        if p_n and t[0][:p_n] == p_ext:
+        if t[0][:p_n] == p_ext:
           continue
         else:
           cu.execute('insert into %s values (%s)'%(tname, rcnt), t)

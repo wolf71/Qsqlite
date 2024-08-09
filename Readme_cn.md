@@ -118,7 +118,7 @@
     - 将会自动根据csv表头信息来构建 数据库表 的信息，而后插入数据，例如:
       - tab01 ( "ID" text, "Name" text, "Tele" text )
   - loadcsv 也支持 **tsv 格式**文件 (用 \t 分割的类型), 使用: loadcsv test.tsv tb1 1 加载即可.
-  - loadcsv 也支持 **生物信息学 .maf/.vcf/.sam/.gtf/.gff/.gpd file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
+  - loadcsv 也支持 **生物信息学 .maf/.vcf/.sam/.gtf/.gff/.gpd/.gct file**, 使用: loadcsv test.maf tb1   或  loadcsv test.vcf tb1  加载即可.
   - loadcsv 支持直接加载 gzip / zip 压缩文件; 通过后缀名判断; 例如 test.tsv.gz / test.gtf.gz / test.csv.zip
 - 2.2 导出 csv / tsv
   - 使用 **>csv csv/tsv文件名 0/1** (后面的参数0/1 表示是否导出表头信息. 0-不导出, 1-导出)
@@ -529,6 +529,7 @@
 - 2022/04/08   V0.96 Add .sam/.gtf/.gff/.gpd file support on loadcsv, add loadgb / exec function.
 - 2022/04/20   V0.97 Add ext-sql function: summary, and loop loadweb, download function.
 - 2024/04/25   V0.973 fix summary std function bug, add >csv support tsv format. add .gz/.zip support.
+- 2024/05/15   V0.974 Add .gct file support on loadcsv
 
 ## sqlite 参考资料
 - SQlite3 Doc

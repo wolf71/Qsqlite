@@ -5,7 +5,7 @@ with open('Readme.md', 'r') as f:
 
 setuptools.setup(
     name = 'Qsqlite',
-    version = '0.973',
+    version = '0.974',
     author = 'Charles Lai',
     author_email = '',
     description = 'Quick Sqlite Tools',
